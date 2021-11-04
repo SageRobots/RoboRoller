@@ -984,9 +984,9 @@ Text GLabel 3850 4800 0    50   Input ~ 0
 XB1
 Text GLabel 3850 4900 0    50   Input ~ 0
 XB2
-Text GLabel 4550 4600 0    50   Input ~ 0
-XA1
 Text GLabel 4550 4700 0    50   Input ~ 0
+XA1
+Text GLabel 4550 4600 0    50   Input ~ 0
 XA2
 Text GLabel 4550 4800 0    50   Input ~ 0
 XB1
@@ -1028,9 +1028,9 @@ Text GLabel 3850 6900 0    50   Input ~ 0
 ZB1
 Text GLabel 3850 7000 0    50   Input ~ 0
 ZB2
-Text GLabel 4550 6700 0    50   Input ~ 0
-ZA1
 Text GLabel 4550 6800 0    50   Input ~ 0
+ZA1
+Text GLabel 4550 6700 0    50   Input ~ 0
 ZA2
 Text GLabel 4550 6900 0    50   Input ~ 0
 ZB1
