@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Muscle Roller</title>
+</head>
+<body>
+	<h1>Muscle Roller Controls</h1>
+	<label for="inp-move-abs">Positions:</label>
+  <input type="text" id="inp-move-abs" name="inp-move-abs"><br>
+	<button type="button" id="btn-move-abs">Move</button>
+
+	<p id="p1"></p>
+	<p id="p-battery"></p>
+	<p id="p-pos"></p>
+</body>
+</html>
+
+<script>
+	var p1 = document.getElementById("p1");
+	var btnMoveAbs = document.getElementById('btn-move-abs');
+	var xhttp = new XMLHttpRequest();
+  var xhttpBattery = new XMLHttpRequest();
+  var xhttpPos = new XMLHttpRequest();
+  var xhttpMoveAbs = new XMLHttpRequest();
+
+	btnMoveAbs.onclick = function() {
+		//parse the three values
+		var getQuery = 'moveAbs?'
+		var raw = document.getElementById('inp-move-abs').value;
+		getQuery += raw;
+		console.log("getQuery: " + getQuery);
+		xhttpMoveAbs.open('GET', getQuery, true);
+		xhttpMoveAbs.send();
+	};
+
+	//request battery periodically
+	function getBattery() {
+	  xhttpBattery.onreadystatechange = function() {
+	    if (this.readyState == 4 && this.status == 200) {
+	      document.getElementById("p-battery").innerHTML =
+	      'Battery Voltage: ' + this.responseText;
+	    }
+	  };
+	  xhttpBattery.open("GET", "battery", true);
+	  xhttpBattery.send();
+	};
+	setInterval(getBattery, 10000);
+
+	//request position periodically
+	function getPos() {
+	  xhttpPos.onreadystatechange = function() {
+	    if (this.readyState == 4 && this.status == 200) {
+	      document.getElementById("p-pos").innerHTML =
+	      'Position: ' + this.responseText;
+	    }
+	  };
+	  xhttpPos.open("GET", "pos", true);
+	  xhttpPos.send();
+	};
+	setInterval(getPos, 2000);
+</script>
