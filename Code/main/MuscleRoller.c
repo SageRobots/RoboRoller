@@ -24,8 +24,8 @@
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to s
-#define TIMER_INTERVAL0_S    0.010 // sample test interval for the first timer
-#define TIMER_INTERVAL1_S 0.001
+#define TIMER_INTERVAL0_S    0.0002 // sample test interval for the first timer
+#define TIMER_INTERVAL1_S 0.00005
 static EventGroupHandle_t wifiEventGroup;
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
@@ -56,6 +56,7 @@ float battery = 12.0;
 struct motor {
     float stepsPer_mm;
     float targetPos;
+    float targetSpeed;
     float currentPos;
     volatile int32_t currentSteps;
     int32_t targetSteps;
@@ -63,17 +64,12 @@ struct motor {
     int pinStep;
     int pinDir;
     int pinEn;
+    int speedCount;
+    volatile int intrCount;
 };
-
-volatile int intr_count = 0;
-volatile int intr_count1 = 0;
-volatile int intr_count2 = 0;
-volatile bool masterComplete, slaveComplete;
-bool newMove;
 
 struct motor motorX;
 struct motor motorZ;
-bool robotEnabled = false;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -213,6 +209,36 @@ static esp_err_t get_handler_move(httpd_req_t *req) {
     return ESP_OK;
 }
 
+static esp_err_t get_handler_speeds(httpd_req_t *req) {
+    char*  buf;
+    size_t buf_len;
+    /* Read URL query string length and allocate memory for length + 1,
+    * extra byte for null termination */
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            char param[32];
+            /* Get value of expected key from query string */
+            if (httpd_query_key_value(buf, "x", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
+                motorX.targetSpeed = atof(param);
+                //mm/s
+                //step/s
+                //step/intr
+                motorX.speedCount = 1.0/(motorX.targetSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+                printf("speed count: %d\n", motorX.speedCount);
+            }
+            if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
+                motorZ.targetSpeed = atof(param);
+            }
+        }
+        free(buf);
+    }
+    return ESP_OK;
+}
+
 static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -227,6 +253,15 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL   // Pass server data as context
         };
         httpd_register_uri_handler(server, &move_uri);
+
+        httpd_uri_t speeds_uri = {
+            .uri       = "/speeds*",  // Match all URIs of type /path/to/file
+            .method    = HTTP_GET,
+            .handler   = get_handler_speeds,
+            .user_ctx  = NULL   // Pass server data as context
+        };
+        httpd_register_uri_handler(server, &speeds_uri);
+
         httpd_uri_t get_uri_1 = {
             .uri       = "/",
             .method    = HTTP_GET,
@@ -234,7 +269,7 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL
         };
         httpd_register_uri_handler(server, &get_uri_1);
-        /* URI handler for getting uploaded files */
+
         httpd_uri_t file_download = {
             .uri       = "/*",  // Match all URIs of type /path/to/file
             .method    = HTTP_GET,
@@ -242,6 +277,7 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL   // Pass server data as context
         };
         httpd_register_uri_handler(server, &file_download);
+
         return server;
     }
 
@@ -277,25 +313,44 @@ void IRAM_ATTR timer_0_isr(void *para) {
     timer_spinlock_take(TIMER_GROUP_0);
     bool stepX = false;
     bool stepZ = false;
+    motorX.intrCount++;
+    motorZ.intrCount++;
 
-    motorX.stepsToTarget = motorX.targetSteps - motorX.currentSteps;
-    motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
+    //motorX
+    if(motorX.intrCount >= motorX.speedCount) {
+        motorX.intrCount = 0;
 
-    //set direction
-    if(motorX.stepsToTarget > 0) {
-        gpio_set_level(motorX.pinDir, 1);
-    } else {
-        gpio_set_level(motorX.pinDir, 0);
+        motorX.stepsToTarget = motorX.targetSteps - motorX.currentSteps;
+        motorX.currentPos = motorX.currentSteps/motorX.stepsPer_mm;
+
+        //set direction
+        if(motorX.stepsToTarget > 0) {
+            gpio_set_level(motorX.pinDir, 1);
+            motorX.currentSteps++;
+        } else if (motorX.stepsToTarget < 0) {
+            gpio_set_level(motorX.pinDir, 0);
+            motorX.currentSteps--;
+        }
+
+        if(motorX.stepsToTarget != 0) stepX = true;
     }
-    if(motorZ.stepsToTarget > 0) {
-        gpio_set_level(motorZ.pinDir, 1);
-    } else {
-        gpio_set_level(motorZ.pinDir, 0);
-    }
 
-    //step
-    if(motorX.stepsToTarget != 0) stepX = true;
-    if(motorZ.stepsToTarget != 0) stepZ = true;
+    //motorZ
+    if(motorZ.intrCount >= motorX.speedCount) {
+        motorZ.intrCount = 0;
+        motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
+        motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
+
+        if(motorZ.stepsToTarget > 0) {
+            gpio_set_level(motorZ.pinDir, 1);
+            motorZ.currentSteps++;
+        } else if (motorZ.stepsToTarget < 0) {
+            gpio_set_level(motorZ.pinDir, 0);
+            motorZ.currentSteps--;
+        }
+
+        if(motorZ.stepsToTarget != 0) stepZ = true;
+    }
 
     if(stepX) gpio_set_level(motorX.pinStep, 1);
     if(stepZ) gpio_set_level(motorZ.pinStep, 1);
@@ -342,13 +397,14 @@ static void tg0_timer_init(int timer_idx,
     timer_enable_intr(TIMER_GROUP_0, timer_idx);
 }
 
-void motorInit(motor motor, int pinEn, int pinStep, int pinDir, float gearRatio) {
-    motor.currentSteps = 0;
-    motor.pinEn = pinEn;
-    motor.pinStep = pinStep;
-    motor.pinDir = pinDir;
-    motors[i].stepsPerDeg = 200.0*gearRatio/360.0;
-    motors[i].degPerStep = 1.0/motors[i].stepsPerDeg;
+void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio) {
+    motor->currentSteps = 0;
+    motor->pinEn = pinEn;
+    motor->pinStep = pinStep;
+    motor->pinDir = pinDir;
+    motor->stepsPer_mm = 200.0*gearRatio/8.0;
+    motor->intrCount = 0;
+    motor->speedCount = 100;
 }
 
 void app_main(void) {
@@ -391,8 +447,8 @@ void app_main(void) {
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adc_chars);
 
     // configure motors
-    motorInit(motorX, pinEnX, pinStepX, pinDirX, 26.0+103.0/121.0);
-    motorInit(motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0);
+    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0);
+    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0);
 
     tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -406,8 +462,7 @@ void app_main(void) {
 
     while(1) {
         uint32_t adc_reading = 0;
-        int raw;
-        adc2_get_raw((adc2_channel_t)pinCharge, width, &raw);
+        int raw = adc1_get_raw((adc_channel_t)pinCharge);
         adc_reading = raw;
         //Convert adc_reading to voltage in mV
         uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);

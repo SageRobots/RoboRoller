@@ -7,9 +7,17 @@
 </head>
 <body>
 	<h1>Muscle Roller Controls</h1>
-	<label for="inp-move-abs">Positions:</label>
-  <input type="text" id="inp-move-abs" name="inp-move-abs"><br>
-	<button type="button" id="btn-move-abs">Move</button>
+	<div>
+		<label for="inp-move-abs">Positions:</label>
+	  <input type="text" id="inp-move-abs" name="inp-move-abs"><br>
+		<button type="button" id="btn-move-abs">Move</button>
+	</div>
+
+	<div>
+		<label for="inp-speed">Speeds:</label>
+	  <input type="text" id="inp-speed" name="inp-speed"><br>
+		<button type="button" id="btn-speed">Set Speeds</button>
+	</div>
 
 	<p id="p1"></p>
 	<p id="p-battery"></p>
@@ -20,10 +28,12 @@
 <script>
 	var p1 = document.getElementById("p1");
 	var btnMoveAbs = document.getElementById('btn-move-abs');
+	var btnSpeed = document.getElementById('btn-speed');
 	var xhttp = new XMLHttpRequest();
   var xhttpBattery = new XMLHttpRequest();
   var xhttpPos = new XMLHttpRequest();
   var xhttpMoveAbs = new XMLHttpRequest();
+  var xhttpSpeeds = new XMLHttpRequest();
 
 	btnMoveAbs.onclick = function() {
 		//parse the three values
@@ -33,6 +43,16 @@
 		console.log("getQuery: " + getQuery);
 		xhttpMoveAbs.open('GET', getQuery, true);
 		xhttpMoveAbs.send();
+	};
+
+	btnSpeed.onclick = function() {
+		//parse the three values
+		var getQuery = 'speeds?'
+		var raw = document.getElementById('inp-speed').value;
+		getQuery += raw;
+		console.log("getQuery: " + getQuery);
+		xhttpSpeeds.open('GET', getQuery, true);
+		xhttpSpeeds.send();
 	};
 
 	//request battery periodically
