@@ -66,10 +66,15 @@ struct motor {
     int pinEn;
     int speedCount;
     volatile int intrCount;
+    bool home;
+    bool homing;
 };
 
 struct motor motorX;
 struct motor motorZ;
+
+int64_t timeNow;
+int64_t timePrint = 0;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -197,6 +202,10 @@ static esp_err_t get_handler_move(httpd_req_t *req) {
                 ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
                 motorX.targetPos = atof(param);
                 motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+                if(motorX.targetPos == 0) {
+                    motorX.homing = true;
+                    motorX.targetSteps = -500*motorX.stepsPer_mm;
+                }
             }
             if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
@@ -333,6 +342,14 @@ void IRAM_ATTR timer_0_isr(void *para) {
         }
 
         if(motorX.stepsToTarget != 0) stepX = true;
+
+        //check if x is home
+        if(motorX.homing && motorX.home) {
+            stepX = false;
+            motorX.currentSteps = 0;
+            motorX.targetSteps = 0;
+            motorX.homing = false;
+        }
     }
 
     //motorZ
@@ -397,14 +414,15 @@ static void tg0_timer_init(int timer_idx,
     timer_enable_intr(TIMER_GROUP_0, timer_idx);
 }
 
-void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio) {
+void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio, float targetSpeed) {
     motor->currentSteps = 0;
     motor->pinEn = pinEn;
     motor->pinStep = pinStep;
     motor->pinDir = pinDir;
     motor->stepsPer_mm = 200.0*gearRatio/8.0;
     motor->intrCount = 0;
-    motor->speedCount = 100;
+    motor->targetSpeed = targetSpeed;
+    motor->speedCount = 1.0/(motor->targetSpeed*motor->stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
 void app_main(void) {
@@ -441,14 +459,28 @@ void app_main(void) {
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
+    //configure inputs
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //bit mask of the pins that you want to set
+    io_conf.pin_bit_mask = 1ULL<<pinHomX|1ULL<<pinHomZ;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 1;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+
     //configure ADC
     adc2_config_channel_atten((adc_channel_t)pinCharge, atten);
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adc_chars);
 
     // configure motors
-    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0);
-    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0);
+    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0, 5);
+    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0, 1);
 
     tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -461,18 +493,23 @@ void app_main(void) {
     timer_start(TIMER_GROUP_0, TIMER_1);
 
     while(1) {
-        uint32_t adc_reading = 0;
-        int raw = adc1_get_raw((adc_channel_t)pinCharge);
-        adc_reading = raw;
-        //Convert adc_reading to voltage in mV
-        uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-        battery = (float)voltage*57.0/10000.0;
-        //if voltage is too low, deep sleep indefinitely
-        if(battery < 9.6) {
-            printf("Low battery: %.2f V\n", battery);
-            esp_deep_sleep_start();
+        vTaskDelay(10/portTICK_RATE_MS);
+        timeNow = esp_timer_get_time();
+        motorX.home = !gpio_get_level(pinHomX);
+        if(timeNow - timePrint > 1000000) {
+            uint32_t adc_reading = 0;
+            int raw = adc1_get_raw((adc_channel_t)pinCharge);
+            adc_reading = raw;
+            //Convert adc_reading to voltage in mV
+            uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+            battery = (float)voltage*57.0/10000.0;
+            //if voltage is too low, deep sleep indefinitely
+            if(battery < 9.6) {
+                printf("Low battery: %.2f V\n", battery);
+                esp_deep_sleep_start();
+            }
+            printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            timePrint = timeNow;
         }
-        printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
-        vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
