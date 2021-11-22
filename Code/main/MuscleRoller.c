@@ -18,6 +18,7 @@
 #include <math.h>
 #include "driver/timer.h"
 #include "driver/spi_master.h"
+#include <hx711.h>
 
 #define WIFI_SSID      "RobotHouse"
 #define WIFI_PASS      "Ro8otH@u53"
@@ -75,6 +76,9 @@ struct motor motorZ;
 
 int64_t timeNow;
 int64_t timePrint = 0;
+
+const float LC1Zero = 39600;
+const float LC125lb = 627188;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -425,6 +429,47 @@ void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float ge
     motor->speedCount = 1.0/(motor->targetSpeed*motor->stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
+void loadCell(void *pvParameters) {
+    hx711_t dev = {
+        .dout = pinLCDat,
+        .pd_sck = pinLCClk,
+        .gain = HX711_GAIN_A_64
+    };
+
+    // initialize device
+    while (1)
+    {
+        esp_err_t r = hx711_init(&dev);
+        if (r == ESP_OK)
+            break;
+        printf("Could not initialize HX711: %d (%s)\n", r, esp_err_to_name(r));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    // read from device
+    while (1)
+    {
+        esp_err_t r = hx711_wait(&dev, 500);
+        if (r != ESP_OK)
+        {
+            printf("Device not found: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        int32_t data;
+        r = hx711_read_data(&dev, &data);
+        if (r != ESP_OK)
+        {
+            printf("Could not read data: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        printf("Lb Force: %.1f\n", 25*(data-LC1Zero)/LC125lb);
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
 void app_main(void) {
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
@@ -492,6 +537,9 @@ void app_main(void) {
        (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_1);
 
+    //create load cell task
+    xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+
     while(1) {
         vTaskDelay(10/portTICK_RATE_MS);
         timeNow = esp_timer_get_time();
@@ -508,7 +556,7 @@ void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            // printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
             timePrint = timeNow;
         }
     }
