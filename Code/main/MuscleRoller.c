@@ -79,6 +79,10 @@ int64_t timePrint = 0;
 
 const float LC1Zero = 39600;
 const float LC125lb = 627188;
+const float LC2Zero = 44318;
+const float LC225lb = 627140;
+float force1, force2;
+float targetForce = 0;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -215,6 +219,7 @@ static esp_err_t get_handler_move(httpd_req_t *req) {
                 ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
                 motorZ.targetPos = atof(param);
                 motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+                targetForce = 0;
             }
         }
         free(buf);
@@ -252,6 +257,24 @@ static esp_err_t get_handler_speeds(httpd_req_t *req) {
     return ESP_OK;
 }
 
+static esp_err_t get_handler_force(httpd_req_t *req) {
+    char*  buf;
+    size_t buf_len;
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            char param[32];
+            if (httpd_query_key_value(buf, "f", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => f=%s", param);
+                targetForce = atof(param);
+            }
+        }
+        free(buf);
+    }
+    return ESP_OK;
+}
+
 static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -274,6 +297,14 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL   // Pass server data as context
         };
         httpd_register_uri_handler(server, &speeds_uri);
+
+        httpd_uri_t force_uri = {
+            .uri       = "/force*",  // Match all URIs of type /path/to/file
+            .method    = HTTP_GET,
+            .handler   = get_handler_force,
+            .user_ctx  = NULL   // Pass server data as context
+        };
+        httpd_register_uri_handler(server, &force_uri);
 
         httpd_uri_t get_uri_1 = {
             .uri       = "/",
@@ -464,7 +495,50 @@ void loadCell(void *pvParameters) {
             continue;
         }
 
-        printf("Lb Force: %.1f\n", 25*(data-LC1Zero)/LC125lb);
+        force1 = 25*(data-LC1Zero)/LC125lb;
+        // printf("Raw: %d\n", data);
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+void loadCell2(void *pvParameters) {
+    hx711_t dev = {
+        .dout = pinLCDat2,
+        .pd_sck = pinLCClk2,
+        .gain = HX711_GAIN_A_64
+    };
+
+    // initialize device
+    while (1)
+    {
+        esp_err_t r = hx711_init(&dev);
+        if (r == ESP_OK)
+            break;
+        printf("Could not initialize HX711: %d (%s)\n", r, esp_err_to_name(r));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    // read from device
+    while (1)
+    {
+        esp_err_t r = hx711_wait(&dev, 500);
+        if (r != ESP_OK)
+        {
+            printf("Device not found: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        int32_t data;
+        r = hx711_read_data(&dev, &data);
+        if (r != ESP_OK)
+        {
+            printf("Could not read data: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        force2 =  25*(data-LC2Zero)/LC225lb;
+        // printf("Raw: %d\n", data);
 
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -539,6 +613,7 @@ void app_main(void) {
 
     //create load cell task
     xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+    xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
 
     while(1) {
         vTaskDelay(10/portTICK_RATE_MS);
@@ -556,7 +631,8 @@ void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            // printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            printf("F1 %.1f\t F2 %.1f\n", force1, force2);
             timePrint = timeNow;
         }
     }
