@@ -19,6 +19,12 @@
 		<button type="button" id="btn-speed">Set Speeds</button>
 	</div>
 
+	<div>
+		<label for="inp-force">Force:</label>
+	  <input type="text" id="inp-force" name="inp-force"><br>
+		<button type="button" id="btn-force">Set Force</button>
+	</div>
+
 	<p id="p1"></p>
 	<p id="p-battery"></p>
 	<p id="p-pos"></p>
@@ -29,11 +35,13 @@
 	var p1 = document.getElementById("p1");
 	var btnMoveAbs = document.getElementById('btn-move-abs');
 	var btnSpeed = document.getElementById('btn-speed');
+	var btnForce = document.getElementById('btn-force');
 	var xhttp = new XMLHttpRequest();
   var xhttpBattery = new XMLHttpRequest();
   var xhttpPos = new XMLHttpRequest();
   var xhttpMoveAbs = new XMLHttpRequest();
   var xhttpSpeeds = new XMLHttpRequest();
+  var xhttpForce = new XMLHttpRequest();
 
 	btnMoveAbs.onclick = function() {
 		//parse the three values
@@ -53,6 +61,16 @@
 		console.log("getQuery: " + getQuery);
 		xhttpSpeeds.open('GET', getQuery, true);
 		xhttpSpeeds.send();
+	};
+
+	btnForce.onclick = function() {
+		//parse the three values
+		var getQuery = 'force?'
+		var raw = document.getElementById('inp-force').value;
+		getQuery += raw;
+		console.log("getQuery: " + getQuery);
+		xhttpForce.open('GET', getQuery, true);
+		xhttpForce.send();
 	};
 
 	//request battery periodically

@@ -18,6 +18,7 @@
 #include <math.h>
 #include "driver/timer.h"
 #include "driver/spi_master.h"
+#include <hx711.h>
 
 #define WIFI_SSID      "RobotHouse"
 #define WIFI_PASS      "Ro8otH@u53"
@@ -66,10 +67,22 @@ struct motor {
     int pinEn;
     int speedCount;
     volatile int intrCount;
+    bool home;
+    bool homing;
 };
 
 struct motor motorX;
 struct motor motorZ;
+
+int64_t timeNow;
+int64_t timePrint = 0;
+
+const float LC1Zero = 39600;
+const float LC125lb = 627188;
+const float LC2Zero = 44318;
+const float LC225lb = 627140;
+float force1, force2;
+float targetForce = 0;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -197,11 +210,16 @@ static esp_err_t get_handler_move(httpd_req_t *req) {
                 ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
                 motorX.targetPos = atof(param);
                 motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+                if(motorX.targetPos == 0) {
+                    motorX.homing = true;
+                    motorX.targetSteps = -500*motorX.stepsPer_mm;
+                }
             }
             if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
                 motorZ.targetPos = atof(param);
                 motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+                targetForce = 0;
             }
         }
         free(buf);
@@ -239,6 +257,24 @@ static esp_err_t get_handler_speeds(httpd_req_t *req) {
     return ESP_OK;
 }
 
+static esp_err_t get_handler_force(httpd_req_t *req) {
+    char*  buf;
+    size_t buf_len;
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            char param[32];
+            if (httpd_query_key_value(buf, "f", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => f=%s", param);
+                targetForce = atof(param);
+            }
+        }
+        free(buf);
+    }
+    return ESP_OK;
+}
+
 static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -261,6 +297,14 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL   // Pass server data as context
         };
         httpd_register_uri_handler(server, &speeds_uri);
+
+        httpd_uri_t force_uri = {
+            .uri       = "/force*",  // Match all URIs of type /path/to/file
+            .method    = HTTP_GET,
+            .handler   = get_handler_force,
+            .user_ctx  = NULL   // Pass server data as context
+        };
+        httpd_register_uri_handler(server, &force_uri);
 
         httpd_uri_t get_uri_1 = {
             .uri       = "/",
@@ -333,6 +377,14 @@ void IRAM_ATTR timer_0_isr(void *para) {
         }
 
         if(motorX.stepsToTarget != 0) stepX = true;
+
+        //check if x is home
+        if(motorX.homing && motorX.home) {
+            stepX = false;
+            motorX.currentSteps = 0;
+            motorX.targetSteps = 0;
+            motorX.homing = false;
+        }
     }
 
     //motorZ
@@ -397,14 +449,99 @@ static void tg0_timer_init(int timer_idx,
     timer_enable_intr(TIMER_GROUP_0, timer_idx);
 }
 
-void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio) {
+void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio, float targetSpeed) {
     motor->currentSteps = 0;
     motor->pinEn = pinEn;
     motor->pinStep = pinStep;
     motor->pinDir = pinDir;
     motor->stepsPer_mm = 200.0*gearRatio/8.0;
     motor->intrCount = 0;
-    motor->speedCount = 100;
+    motor->targetSpeed = targetSpeed;
+    motor->speedCount = 1.0/(motor->targetSpeed*motor->stepsPer_mm*TIMER_INTERVAL0_S);
+}
+
+void loadCell(void *pvParameters) {
+    hx711_t dev = {
+        .dout = pinLCDat,
+        .pd_sck = pinLCClk,
+        .gain = HX711_GAIN_A_64
+    };
+
+    // initialize device
+    while (1)
+    {
+        esp_err_t r = hx711_init(&dev);
+        if (r == ESP_OK)
+            break;
+        printf("Could not initialize HX711: %d (%s)\n", r, esp_err_to_name(r));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    // read from device
+    while (1)
+    {
+        esp_err_t r = hx711_wait(&dev, 500);
+        if (r != ESP_OK)
+        {
+            printf("Device not found: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        int32_t data;
+        r = hx711_read_data(&dev, &data);
+        if (r != ESP_OK)
+        {
+            printf("Could not read data: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        force1 = 25*(data-LC1Zero)/LC125lb;
+        // printf("Raw: %d\n", data);
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+void loadCell2(void *pvParameters) {
+    hx711_t dev = {
+        .dout = pinLCDat2,
+        .pd_sck = pinLCClk2,
+        .gain = HX711_GAIN_A_64
+    };
+
+    // initialize device
+    while (1)
+    {
+        esp_err_t r = hx711_init(&dev);
+        if (r == ESP_OK)
+            break;
+        printf("Could not initialize HX711: %d (%s)\n", r, esp_err_to_name(r));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    // read from device
+    while (1)
+    {
+        esp_err_t r = hx711_wait(&dev, 500);
+        if (r != ESP_OK)
+        {
+            printf("Device not found: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        int32_t data;
+        r = hx711_read_data(&dev, &data);
+        if (r != ESP_OK)
+        {
+            printf("Could not read data: %d (%s)\n", r, esp_err_to_name(r));
+            continue;
+        }
+
+        force2 =  25*(data-LC2Zero)/LC225lb;
+        // printf("Raw: %d\n", data);
+
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 }
 
 void app_main(void) {
@@ -441,14 +578,28 @@ void app_main(void) {
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
+    //configure inputs
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //bit mask of the pins that you want to set
+    io_conf.pin_bit_mask = 1ULL<<pinHomX|1ULL<<pinHomZ;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 1;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+
     //configure ADC
     adc2_config_channel_atten((adc_channel_t)pinCharge, atten);
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adc_chars);
 
     // configure motors
-    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0);
-    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0);
+    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0, 5);
+    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0, 1);
 
     tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -460,19 +611,29 @@ void app_main(void) {
        (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_1);
 
+    //create load cell task
+    xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+    xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+
     while(1) {
-        uint32_t adc_reading = 0;
-        int raw = adc1_get_raw((adc_channel_t)pinCharge);
-        adc_reading = raw;
-        //Convert adc_reading to voltage in mV
-        uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-        battery = (float)voltage*57.0/10000.0;
-        //if voltage is too low, deep sleep indefinitely
-        if(battery < 9.6) {
-            printf("Low battery: %.2f V\n", battery);
-            esp_deep_sleep_start();
+        vTaskDelay(10/portTICK_RATE_MS);
+        timeNow = esp_timer_get_time();
+        motorX.home = !gpio_get_level(pinHomX);
+        if(timeNow - timePrint > 1000000) {
+            uint32_t adc_reading = 0;
+            int raw = adc1_get_raw((adc_channel_t)pinCharge);
+            adc_reading = raw;
+            //Convert adc_reading to voltage in mV
+            uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+            battery = (float)voltage*57.0/10000.0;
+            //if voltage is too low, deep sleep indefinitely
+            if(battery < 9.6) {
+                printf("Low battery: %.2f V\n", battery);
+                esp_deep_sleep_start();
+            }
+            printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            printf("F1 %.1f\t F2 %.1f\n", force1, force2);
+            timePrint = timeNow;
         }
-        printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
-        vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
