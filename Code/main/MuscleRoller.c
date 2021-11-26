@@ -81,8 +81,9 @@ const float LC1Zero = 39600;
 const float LC125lb = 627188;
 const float LC2Zero = 44318;
 const float LC225lb = 627140;
-float force1, force2;
-float targetForce = 0;
+float forceL, forceR;
+float targetForce = 0, currentForce = 0;
+const float forceTolerance = 0.2;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -388,20 +389,31 @@ void IRAM_ATTR timer_0_isr(void *para) {
     }
 
     //motorZ
-    if(motorZ.intrCount >= motorX.speedCount) {
+    if(motorZ.intrCount >= motorZ.speedCount) {
         motorZ.intrCount = 0;
-        motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
-        motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
+        if(targetForce == 0) { //position mode
+            motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
+            motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
 
-        if(motorZ.stepsToTarget > 0) {
-            gpio_set_level(motorZ.pinDir, 1);
-            motorZ.currentSteps++;
-        } else if (motorZ.stepsToTarget < 0) {
-            gpio_set_level(motorZ.pinDir, 0);
-            motorZ.currentSteps--;
+            if(motorZ.stepsToTarget > 0) {
+                gpio_set_level(motorZ.pinDir, 1);
+                motorZ.currentSteps++;
+            } else if (motorZ.stepsToTarget < 0) {
+                gpio_set_level(motorZ.pinDir, 0);
+                motorZ.currentSteps--;
+            }
+            if(motorZ.stepsToTarget != 0) stepZ = true;
+
+        } else { //force mode
+            if(currentForce > targetForce + forceTolerance) {
+                gpio_set_level(motorZ.pinDir, 0);
+                stepZ = true;
+            } else if (currentForce < targetForce - forceTolerance) {
+                gpio_set_level(motorZ.pinDir, 1);
+                stepZ = true;
+            }
         }
 
-        if(motorZ.stepsToTarget != 0) stepZ = true;
     }
 
     if(stepX) gpio_set_level(motorX.pinStep, 1);
@@ -495,10 +507,11 @@ void loadCell(void *pvParameters) {
             continue;
         }
 
-        force1 = 25*(data-LC1Zero)/LC125lb;
+        forceL = 25*(data-LC1Zero)/LC125lb;
+        currentForce = (forceL+forceR)/2.0;
         // printf("Raw: %d\n", data);
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -537,10 +550,11 @@ void loadCell2(void *pvParameters) {
             continue;
         }
 
-        force2 =  25*(data-LC2Zero)/LC225lb;
+        forceR =  25*(data-LC2Zero)/LC225lb;
+        currentForce = (forceL+forceR)/2.0;
         // printf("Raw: %d\n", data);
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -632,7 +646,7 @@ void app_main(void) {
                 esp_deep_sleep_start();
             }
             printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
-            printf("F1 %.1f\t F2 %.1f\n", force1, force2);
+            printf("currectForce %.1f\t FL %.1f\t FR %.1f\n", currentForce, forceL, forceR);
             timePrint = timeNow;
         }
     }
