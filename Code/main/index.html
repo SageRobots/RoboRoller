@@ -25,6 +25,28 @@
 		<button type="button" id="btn-force">Set Force</button>
 	</div>
 
+	<div>
+		<button type="button" id="btn-zero-x">Zero X</button>
+		<button type="button" id="btn-zero-z">Zero Z</button>
+	</div>
+
+	<div>
+		<label for="inp-cycle-start-x">Start X:</label>
+	  <input type="text" id="inp-cycle-start-x" name="inp-cycle-start-x"><br>
+		<label for="inp-cycle-start-z">Start Z:</label>
+	  <input type="text" id="inp-cycle-start-z" name="inp-cycle-start-z"><br>
+		<label for="inp-cycle-force">Force:</label>
+	  <input type="text" id="inp-cycle-force" name="inp-cycle-force"><br>
+		<label for="inp-cycle-end-x">End X:</label>
+	  <input type="text" id="inp-cycle-end-x" name="inp-cycle-end-x"><br>
+		<label for="inp-cycle-travel-speed">Travel Speed:</label>
+	  <input type="text" id="inp-cycle-travel-speed" name="inp-cycle-travel-speed"><br>
+	  <label for="inp-cycle-speed">Speed:</label>
+	  <input type="text" id="inp-cycle-speed" name="inp-cycle-speed"><br>
+		<button type="button" id="btn-cycle">Cycle</button>
+		<button type="button" id="btn-stop">Stop</button>
+	</div>
+
 	<p id="p1"></p>
 	<p id="p-battery"></p>
 	<p id="p-pos"></p>
@@ -36,15 +58,21 @@
 	var btnMoveAbs = document.getElementById('btn-move-abs');
 	var btnSpeed = document.getElementById('btn-speed');
 	var btnForce = document.getElementById('btn-force');
+	var btnZeroX = document.getElementById('btn-zero-x');
+	var btnZeroZ = document.getElementById('btn-zero-z');
+	var btnCycle = document.getElementById('btn-cycle');
+	var btnStop = document.getElementById('btn-stop');
 	var xhttp = new XMLHttpRequest();
   var xhttpBattery = new XMLHttpRequest();
   var xhttpPos = new XMLHttpRequest();
   var xhttpMoveAbs = new XMLHttpRequest();
   var xhttpSpeeds = new XMLHttpRequest();
   var xhttpForce = new XMLHttpRequest();
+  var xhttpZero = new XMLHttpRequest();
+  var xhttpCycle = new XMLHttpRequest();
+  var xhttpStop = new XMLHttpRequest();
 
 	btnMoveAbs.onclick = function() {
-		//parse the three values
 		var getQuery = 'moveAbs?'
 		var raw = document.getElementById('inp-move-abs').value;
 		getQuery += raw;
@@ -54,7 +82,6 @@
 	};
 
 	btnSpeed.onclick = function() {
-		//parse the three values
 		var getQuery = 'speeds?'
 		var raw = document.getElementById('inp-speed').value;
 		getQuery += raw;
@@ -64,13 +91,51 @@
 	};
 
 	btnForce.onclick = function() {
-		//parse the three values
 		var getQuery = 'force?'
 		var raw = document.getElementById('inp-force').value;
 		getQuery += raw;
 		console.log("getQuery: " + getQuery);
 		xhttpForce.open('GET', getQuery, true);
 		xhttpForce.send();
+	};
+
+	function zero(axis) {
+		var getQuery = 'zero?'
+		if(axis == 'x') {
+			getQuery += 'axis=x'
+		} else if (axis == 'z') {
+			getQuery += 'axis=z'
+		}
+		console.log("getQuery: " + getQuery);
+		xhttpZero.open('GET', getQuery, true)
+		xhttpZero.send()
+	}
+	btnZeroX.onclick = zero('x')
+	btnZeroZ.onclick = zero('z')
+
+	btnStop.onclick = function() {
+		xhttpStop.open('GET', 'stop', true);
+		xhttpStop.send();
+	}
+
+	btnCycle.onclick = function() {
+		var getQuery = 'cycle?startX='
+		var inp = document.getElementById('inp-cycle-start-x').value
+		getQuery += inp + '&startZ='
+		inp = document.getElementById('inp-cycle-start-z').value
+		getQuery += inp + '&force='
+		inp = document.getElementById('inp-cycle-force').value
+		getQuery += inp + '&endX='
+		inp = document.getElementById('inp-cycle-end-x').value
+		getQuery += inp + '&travelSpeed='
+		inp = document.getElementById('inp-cycle-travel-speed').value
+		getQuery += inp + '&speed='
+		inp = document.getElementById('inp-cycle-speed').value
+		getQuery += inp
+
+		console.log("getQuery: " + getQuery);
+		xhttpCycle.open('GET', getQuery, true);
+		xhttpCycle.send();
 	};
 
 	//request battery periodically

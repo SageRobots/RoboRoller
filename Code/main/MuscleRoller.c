@@ -69,10 +69,24 @@ struct motor {
     volatile int intrCount;
     bool home;
     bool homing;
+    volatile bool complete;
 };
 
 struct motor motorX;
 struct motor motorZ;
+
+struct cycle {
+    bool cycling;
+    int step;
+    float force;
+    float startX;
+    float endX;
+    float startZ;
+    float travelSpeed;
+    float speed;
+};
+
+struct cycle cycle;
 
 int64_t timeNow;
 int64_t timePrint = 0;
@@ -184,10 +198,16 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
         snprintf(result, len + 1, "%.2f", battery);
         httpd_resp_sendstr(req, result);
     } else if (!strcmp(req->uri,"/pos")) {
-        int len = snprintf(NULL, 0, "X:%.2f\t Z:%.2f\t", motorX.currentPos, motorZ.currentPos);
+        int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
+            motorX.currentPos, motorZ.currentPos, currentForce);
         char *result = (char *)malloc(len + 1);
-        snprintf(result, len + 1, "X:%.2f\t Z:%.2f\t", motorX.currentPos, motorZ.currentPos);
+        snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
+            motorX.currentPos, motorZ.currentPos, currentForce);
         httpd_resp_sendstr(req, result);
+    } else if (!strcmp(req->uri,"/stop")) {
+        motorX.targetSteps = motorX.currentSteps;
+        motorZ.targetSteps = motorZ.currentSteps;
+        cycle.cycling = false;
     } else {
         printf("URI: ");
         printf(req->uri);
@@ -211,10 +231,10 @@ static esp_err_t get_handler_move(httpd_req_t *req) {
                 ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
                 motorX.targetPos = atof(param);
                 motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
-                if(motorX.targetPos == 0) {
-                    motorX.homing = true;
-                    motorX.targetSteps = -500*motorX.stepsPer_mm;
-                }
+                // if(motorX.targetPos == 0) {
+                //     motorX.homing = true;
+                //     motorX.targetSteps = -500*motorX.stepsPer_mm;
+                // }
             }
             if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
@@ -251,6 +271,7 @@ static esp_err_t get_handler_speeds(httpd_req_t *req) {
             if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
                 motorZ.targetSpeed = atof(param);
+                motorZ.speedCount = 1.0/(motorZ.targetSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
             }
         }
         free(buf);
@@ -270,6 +291,65 @@ static esp_err_t get_handler_force(httpd_req_t *req) {
                 ESP_LOGI(TAG, "Found URL query parameter => f=%s", param);
                 targetForce = atof(param);
             }
+        }
+        free(buf);
+    }
+    return ESP_OK;
+}
+
+static esp_err_t get_handler_zero(httpd_req_t *req) {
+    char*  buf;
+    size_t buf_len;
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            char param[32];
+            if (httpd_query_key_value(buf, "axis", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => axis=%s", param);
+                if(*param == 'x') motorX.currentSteps = 0;
+                if(*param == 'z') motorZ.currentSteps = 0;
+            }
+        }
+        free(buf);
+    }
+    return ESP_OK;
+}
+
+static esp_err_t get_handler_cycle(httpd_req_t *req) {
+    char*  buf;
+    size_t buf_len;
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1) {
+        buf = malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+            char param[32];
+            if (httpd_query_key_value(buf, "startX", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => startX=%s", param);
+                cycle.startX = atof(param);
+            }
+            if (httpd_query_key_value(buf, "startZ", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => startZ=%s", param);
+                cycle.startZ = atof(param);
+            }
+            if (httpd_query_key_value(buf, "force", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => force=%s", param);
+                cycle.force = atof(param);
+            }
+            if (httpd_query_key_value(buf, "endX", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => endX=%s", param);
+                cycle.endX = atof(param);
+            }
+            if (httpd_query_key_value(buf, "travelSpeed", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => travelSpeed=%s", param);
+                cycle.travelSpeed = atof(param);
+            }
+            if (httpd_query_key_value(buf, "speed", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => speed=%s", param);
+                cycle.speed = atof(param);
+            }
+            cycle.cycling = true;
+            cycle.step = 0;
         }
         free(buf);
     }
@@ -306,6 +386,22 @@ static httpd_handle_t start_webserver(void) {
             .user_ctx  = NULL   // Pass server data as context
         };
         httpd_register_uri_handler(server, &force_uri);
+
+        httpd_uri_t zero_uri = {
+            .uri       = "/zero*", 
+            .method    = HTTP_GET,
+            .handler   = get_handler_zero,
+            .user_ctx  = NULL
+        };
+        httpd_register_uri_handler(server, &zero_uri);
+
+        httpd_uri_t cycle_uri = {
+            .uri       = "/cycle*",
+            .method    = HTTP_GET,
+            .handler   = get_handler_cycle,
+            .user_ctx  = NULL
+        };
+        httpd_register_uri_handler(server, &cycle_uri);
 
         httpd_uri_t get_uri_1 = {
             .uri       = "/",
@@ -377,15 +473,19 @@ void IRAM_ATTR timer_0_isr(void *para) {
             motorX.currentSteps--;
         }
 
-        if(motorX.stepsToTarget != 0) stepX = true;
+        if(motorX.stepsToTarget != 0) {
+            stepX = true;
+        } else {
+            motorX.complete = true;
+        }
 
         //check if x is home
-        if(motorX.homing && motorX.home) {
-            stepX = false;
-            motorX.currentSteps = 0;
-            motorX.targetSteps = 0;
-            motorX.homing = false;
-        }
+        // if(motorX.homing && motorX.home) {
+        //     stepX = false;
+        //     motorX.currentSteps = 0;
+        //     motorX.targetSteps = 0;
+        //     motorX.homing = false;
+        // }
     }
 
     //motorZ
@@ -402,14 +502,18 @@ void IRAM_ATTR timer_0_isr(void *para) {
                 gpio_set_level(motorZ.pinDir, 0);
                 motorZ.currentSteps--;
             }
-            if(motorZ.stepsToTarget != 0) stepZ = true;
+            if(motorZ.stepsToTarget != 0) {
+                stepZ = true;
+            } else {
+                motorZ.complete = true;
+            }
 
         } else { //force mode
             if(currentForce > targetForce + forceTolerance) {
-                gpio_set_level(motorZ.pinDir, 0);
+                gpio_set_level(motorZ.pinDir, 1);
                 stepZ = true;
             } else if (currentForce < targetForce - forceTolerance) {
-                gpio_set_level(motorZ.pinDir, 1);
+                gpio_set_level(motorZ.pinDir, 0);
                 stepZ = true;
             }
         }
@@ -431,8 +535,7 @@ void IRAM_ATTR timer_0_isr(void *para) {
     timer_spinlock_give(TIMER_GROUP_0);
 }
 
-void IRAM_ATTR timer_1_isr(void *para)
-{
+void IRAM_ATTR timer_1_isr(void *para) {
     timer_spinlock_take(TIMER_GROUP_0);
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_1);
     gpio_set_level(motorX.pinStep, 0);
@@ -558,7 +661,71 @@ void loadCell2(void *pvParameters) {
     }
 }
 
+bool forceOk() {
+    if(currentForce > targetForce - forceTolerance) {
+        if(currentForce < targetForce + forceTolerance) return true;
+    }
+    return false;
+}
+
+void runCycle() {
+    switch(cycle.step) {
+        case 0: //move to start x and start z
+        targetForce = 0;
+        motorX.targetPos = cycle.startX;
+        motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+        motorX.complete = false;
+        motorX.speedCount = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+
+        targetForce = 0;
+        motorZ.targetPos = cycle.startZ;
+        motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+        motorZ.complete = false;
+        motorZ.speedCount = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+
+        cycle.step = 10;
+        break;
+
+        case 10: //wait for move complete
+        if(motorX.complete && motorZ.complete) cycle.step = 20;
+        break;
+
+        case 20: //apply force
+        motorZ.speedCount = 1.0/(cycle.speed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
+        targetForce = cycle.force;
+        if(forceOk()) cycle.step = 30;
+        break;
+
+        case 30: // move to end x
+        motorX.speedCount = 1.0/(cycle.speed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorX.targetPos = cycle.endX;
+        motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+        motorX.complete = false;
+        cycle.step = 40;
+        break;
+
+        case 40: //wait for move complete
+        if(motorX.complete) cycle.step = 50;
+        break;
+
+        case 50: // set force to 0 and move to start z
+        motorZ.speedCount = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
+        targetForce = 0;
+        motorZ.targetPos = cycle.startZ;
+        motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+        motorZ.complete = false;
+        cycle.step = 60;
+        break;
+
+        case 60: //wait for move complete
+        if(motorZ.complete) cycle.step = 0;
+        break;
+    }
+}
+
 void app_main(void) {
+    cycle.cycling = false;
+
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -612,8 +779,8 @@ void app_main(void) {
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adc_chars);
 
     // configure motors
-    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 5.0+2.0/11.0, 5);
-    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 26.0+103.0/121.0, 1);
+    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 1,10);
+    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 1, 10);
 
     tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -633,6 +800,7 @@ void app_main(void) {
         vTaskDelay(10/portTICK_RATE_MS);
         timeNow = esp_timer_get_time();
         motorX.home = !gpio_get_level(pinHomX);
+        if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
             uint32_t adc_reading = 0;
             int raw = adc1_get_raw((adc_channel_t)pinCharge);
