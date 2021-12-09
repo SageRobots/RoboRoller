@@ -99,7 +99,7 @@
 		xhttpForce.send();
 	};
 
-	function zero(axis) {
+	function setZero(axis) {
 		var getQuery = 'zero?'
 		if(axis == 'x') {
 			getQuery += 'axis=x'
@@ -110,8 +110,14 @@
 		xhttpZero.open('GET', getQuery, true)
 		xhttpZero.send()
 	}
-	btnZeroX.onclick = zero('x')
-	btnZeroZ.onclick = zero('z')
+
+	btnZeroX.onclick = function() {
+		setZero('x')
+	}
+
+	btnZeroZ.onclick = function() {
+		setZero('z')
+	}
 
 	btnStop.onclick = function() {
 		xhttpStop.open('GET', 'stop', true);

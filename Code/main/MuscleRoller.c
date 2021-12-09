@@ -70,6 +70,7 @@ struct motor {
     bool home;
     bool homing;
     volatile bool complete;
+    int uStep;
 };
 
 struct motor motorX;
@@ -98,6 +99,7 @@ const float LC225lb = 627140;
 float forceL, forceR;
 float targetForce = 0, currentForce = 0;
 const float forceTolerance = 0.2;
+float kp = 2;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -307,8 +309,14 @@ static esp_err_t get_handler_zero(httpd_req_t *req) {
             char param[32];
             if (httpd_query_key_value(buf, "axis", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => axis=%s", param);
-                if(*param == 'x') motorX.currentSteps = 0;
-                if(*param == 'z') motorZ.currentSteps = 0;
+                if(*param == 'x') {
+                    motorX.targetSteps = 0;
+                    motorX.currentSteps = 0;
+                }
+                if(*param == 'z') {
+                    motorZ.targetSteps = 0;
+                    motorZ.currentSteps = 0;
+                }
             }
         }
         free(buf);
@@ -491,9 +499,10 @@ void IRAM_ATTR timer_0_isr(void *para) {
     //motorZ
     if(motorZ.intrCount >= motorZ.speedCount) {
         motorZ.intrCount = 0;
+        motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
+
         if(targetForce == 0) { //position mode
             motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
-            motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
 
             if(motorZ.stepsToTarget > 0) {
                 gpio_set_level(motorZ.pinDir, 1);
@@ -511,9 +520,11 @@ void IRAM_ATTR timer_0_isr(void *para) {
         } else { //force mode
             if(currentForce > targetForce + forceTolerance) {
                 gpio_set_level(motorZ.pinDir, 1);
+                motorZ.currentSteps++;
                 stepZ = true;
             } else if (currentForce < targetForce - forceTolerance) {
                 gpio_set_level(motorZ.pinDir, 0);
+                motorZ.currentSteps--;
                 stepZ = true;
             }
         }
@@ -564,12 +575,13 @@ static void tg0_timer_init(int timer_idx,
     timer_enable_intr(TIMER_GROUP_0, timer_idx);
 }
 
-void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio, float targetSpeed) {
+void motorInit(struct motor *motor, int pinEn, int pinStep, int pinDir, float gearRatio, float targetSpeed, int uStep) {
     motor->currentSteps = 0;
     motor->pinEn = pinEn;
     motor->pinStep = pinStep;
     motor->pinDir = pinDir;
-    motor->stepsPer_mm = 200.0*gearRatio/8.0;
+    motor->uStep = uStep;
+    motor->stepsPer_mm = 200.0*gearRatio/8.0*uStep;
     motor->intrCount = 0;
     motor->targetSpeed = targetSpeed;
     motor->speedCount = 1.0/(motor->targetSpeed*motor->stepsPer_mm*TIMER_INTERVAL0_S);
@@ -611,10 +623,10 @@ void loadCell(void *pvParameters) {
         }
 
         forceL = 25*(data-LC1Zero)/LC125lb;
-        currentForce = (forceL+forceR)/2.0;
+        currentForce = forceL+forceR;
         // printf("Raw: %d\n", data);
 
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -654,10 +666,10 @@ void loadCell2(void *pvParameters) {
         }
 
         forceR =  25*(data-LC2Zero)/LC225lb;
-        currentForce = (forceL+forceR)/2.0;
+        currentForce = forceL+forceR;
         // printf("Raw: %d\n", data);
 
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -691,7 +703,6 @@ void runCycle() {
         break;
 
         case 20: //apply force
-        motorZ.speedCount = 1.0/(cycle.speed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
         targetForce = cycle.force;
         if(forceOk()) cycle.step = 30;
         break;
@@ -721,6 +732,14 @@ void runCycle() {
         if(motorZ.complete) cycle.step = 0;
         break;
     }
+}
+
+void zSpeed() {
+    float error = fabs(targetForce - currentForce);
+    float speed = kp*error;
+    if(speed > 20) speed = 20;
+    if(speed < 0.5) speed = 0.5;
+    motorZ.speedCount = 1.0/(speed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
 void app_main(void) {
@@ -779,8 +798,8 @@ void app_main(void) {
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adc_chars);
 
     // configure motors
-    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 1,10);
-    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 1, 10);
+    motorInit(&motorX, pinEnX, pinStepX, pinDirX, 1, 10, 16);
+    motorInit(&motorZ, pinEnZ, pinStepZ, pinDirZ, 1, 10, 16);
 
     tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -800,6 +819,7 @@ void app_main(void) {
         vTaskDelay(10/portTICK_RATE_MS);
         timeNow = esp_timer_get_time();
         motorX.home = !gpio_get_level(pinHomX);
+        if(targetForce != 0) zSpeed();
         if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
             uint32_t adc_reading = 0;
@@ -813,7 +833,7 @@ void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            // printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
             printf("currectForce %.1f\t FL %.1f\t FR %.1f\n", currentForce, forceL, forceR);
             timePrint = timeNow;
         }
