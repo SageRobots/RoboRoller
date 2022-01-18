@@ -16,204 +16,142 @@ $EndDescr
 $Comp
 L Device:C C?
 U 1 1 60A475BF
-P 3850 2000
+P 7150 4350
 AR Path="/60A3186D/60A475BF" Ref="C?"  Part="1" 
 AR Path="/60A475BF" Ref="C2"  Part="1" 
-F 0 "C2" H 3965 2046 50  0000 L CNN
-F 1 "22u" H 3965 1955 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 3888 1850 50  0001 C CNN
-F 3 "~" H 3850 2000 50  0001 C CNN
-	1    3850 2000
+F 0 "C2" H 7265 4396 50  0000 L CNN
+F 1 "22U" H 7265 4305 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 7188 4200 50  0001 C CNN
+F 3 "~" H 7150 4350 50  0001 C CNN
+	1    7150 4350
 	1    0    0    -1  
 $EndComp
 $Comp
 L Device:C C?
-U 1 1 60A475C5
-P 4250 2000
-AR Path="/60A3186D/60A475C5" Ref="C?"  Part="1" 
-AR Path="/60A475C5" Ref="C5"  Part="1" 
-F 0 "C5" H 4365 2046 50  0000 L CNN
-F 1 "0.1u" H 4365 1955 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 4288 1850 50  0001 C CNN
-F 3 "~" H 4250 2000 50  0001 C CNN
-	1    4250 2000
+U 1 1 61ECC5F8
+P 7550 4350
+AR Path="/60A3186D/61ECC5F8" Ref="C?"  Part="1" 
+AR Path="/61ECC5F8" Ref="C5"  Part="1" 
+F 0 "C5" H 7665 4396 50  0000 L CNN
+F 1 "0.1u" H 7665 4305 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 7588 4200 50  0001 C CNN
+F 3 "~" H 7550 4350 50  0001 C CNN
+	1    7550 4350
 	1    0    0    -1  
 $EndComp
-$Comp
-L A4:ESP32-S2-WROOM U?
-U 1 1 60A475CB
-P 5400 2300
-AR Path="/60A3186D/60A475CB" Ref="U?"  Part="1" 
-AR Path="/60A475CB" Ref="U2"  Part="1" 
-F 0 "U2" H 5550 3281 50  0000 C CNN
-F 1 "ESP32-S2-WROOM" H 5550 3190 50  0000 C CNN
-F 2 "A4:ESP32-S2-WROOM" H 5400 2300 50  0001 C CNN
-F 3 "" H 5400 2300 50  0001 C CNN
-	1    5400 2300
-	1    0    0    -1  
-$EndComp
-$Comp
-L power:GND #PWR?
-U 1 1 60A475D1
-P 4900 1700
-AR Path="/60A3186D/60A475D1" Ref="#PWR?"  Part="1" 
-AR Path="/60A475D1" Ref="#PWR027"  Part="1" 
-F 0 "#PWR027" H 4900 1450 50  0001 C CNN
-F 1 "GND" V 4905 1572 50  0000 R CNN
-F 2 "" H 4900 1700 50  0001 C CNN
-F 3 "" H 4900 1700 50  0001 C CNN
-	1    4900 1700
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	4900 1500 4900 1700
-Wire Wire Line
-	6200 1500 6200 1700
 $Comp
 L power:+3V3 #PWR?
 U 1 1 60A475D9
-P 4250 1800
+P 7550 4150
 AR Path="/60A3186D/60A475D9" Ref="#PWR?"  Part="1" 
 AR Path="/60A475D9" Ref="#PWR025"  Part="1" 
-F 0 "#PWR025" H 4250 1650 50  0001 C CNN
-F 1 "+3V3" H 4265 1973 50  0000 C CNN
-F 2 "" H 4250 1800 50  0001 C CNN
-F 3 "" H 4250 1800 50  0001 C CNN
-	1    4250 1800
+F 0 "#PWR025" H 7550 4000 50  0001 C CNN
+F 1 "+3V3" H 7565 4323 50  0000 C CNN
+F 2 "" H 7550 4150 50  0001 C CNN
+F 3 "" H 7550 4150 50  0001 C CNN
+	1    7550 4150
 	1    0    0    -1  
 $EndComp
 $Comp
 L power:GND #PWR?
 U 1 1 60A475DF
-P 6000 3950
+P 7150 2100
 AR Path="/60A3186D/60A475DF" Ref="#PWR?"  Part="1" 
 AR Path="/60A475DF" Ref="#PWR028"  Part="1" 
-F 0 "#PWR028" H 6000 3700 50  0001 C CNN
-F 1 "GND" H 6005 3777 50  0000 C CNN
-F 2 "" H 6000 3950 50  0001 C CNN
-F 3 "" H 6000 3950 50  0001 C CNN
-	1    6000 3950
+F 0 "#PWR028" H 7150 1850 50  0001 C CNN
+F 1 "GND" H 7155 1927 50  0000 C CNN
+F 2 "" H 7150 2100 50  0001 C CNN
+F 3 "" H 7150 2100 50  0001 C CNN
+	1    7150 2100
 	1    0    0    -1  
 $EndComp
 $Comp
 L Device:C C?
-U 1 1 60A475E5
-P 6550 1950
-AR Path="/60A3186D/60A475E5" Ref="C?"  Part="1" 
-AR Path="/60A475E5" Ref="C6"  Part="1" 
-F 0 "C6" H 6665 1996 50  0000 L CNN
-F 1 "1u" H 6665 1905 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 6588 1800 50  0001 C CNN
-F 3 "~" H 6550 1950 50  0001 C CNN
-	1    6550 1950
+U 1 1 61ECC5FB
+P 7150 1950
+AR Path="/60A3186D/61ECC5FB" Ref="C?"  Part="1" 
+AR Path="/61ECC5FB" Ref="C6"  Part="1" 
+F 0 "C6" H 7265 1996 50  0000 L CNN
+F 1 "1u" H 7265 1905 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 7188 1800 50  0001 C CNN
+F 3 "~" H 7150 1950 50  0001 C CNN
+	1    7150 1950
 	1    0    0    -1  
 $EndComp
 $Comp
 L power:GND #PWR?
-U 1 1 60A475EB
-P 6550 2100
-AR Path="/60A3186D/60A475EB" Ref="#PWR?"  Part="1" 
-AR Path="/60A475EB" Ref="#PWR034"  Part="1" 
-F 0 "#PWR034" H 6550 1850 50  0001 C CNN
-F 1 "GND" H 6555 1927 50  0000 C CNN
-F 2 "" H 6550 2100 50  0001 C CNN
-F 3 "" H 6550 2100 50  0001 C CNN
-	1    6550 2100
+U 1 1 61ECC5FC
+P 10700 4350
+AR Path="/60A3186D/61ECC5FC" Ref="#PWR?"  Part="1" 
+AR Path="/61ECC5FC" Ref="#PWR034"  Part="1" 
+F 0 "#PWR034" H 10700 4100 50  0001 C CNN
+F 1 "GND" H 10705 4177 50  0000 C CNN
+F 2 "" H 10700 4350 50  0001 C CNN
+F 3 "" H 10700 4350 50  0001 C CNN
+	1    10700 4350
 	1    0    0    -1  
 $EndComp
-Text GLabel 6650 1800 2    50   Input ~ 0
-EN
-$Comp
-L Device:R R?
-U 1 1 60A475F3
-P 6550 1550
-AR Path="/60A3186D/60A475F3" Ref="R?"  Part="1" 
-AR Path="/60A475F3" Ref="R3"  Part="1" 
-F 0 "R3" H 6620 1596 50  0000 L CNN
-F 1 "10K" H 6620 1505 50  0000 L CNN
-F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" V 6480 1550 50  0001 C CNN
-F 3 "~" H 6550 1550 50  0001 C CNN
-	1    6550 1550
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	6550 1700 6550 1800
-Connection ~ 6550 1800
 $Comp
 L power:+3V3 #PWR?
 U 1 1 60A475FB
-P 6550 1400
+P 7600 1500
 AR Path="/60A3186D/60A475FB" Ref="#PWR?"  Part="1" 
 AR Path="/60A475FB" Ref="#PWR033"  Part="1" 
-F 0 "#PWR033" H 6550 1250 50  0001 C CNN
-F 1 "+3V3" H 6565 1573 50  0000 C CNN
-F 2 "" H 6550 1400 50  0001 C CNN
-F 3 "" H 6550 1400 50  0001 C CNN
-	1    6550 1400
+F 0 "#PWR033" H 7600 1350 50  0001 C CNN
+F 1 "+3V3" H 7615 1673 50  0000 C CNN
+F 2 "" H 7600 1500 50  0001 C CNN
+F 3 "" H 7600 1500 50  0001 C CNN
+	1    7600 1500
 	1    0    0    -1  
 $EndComp
-Text GLabel 6200 2100 2    50   Input ~ 0
+Text GLabel 7800 2050 0    50   Input ~ 0
 TX
-Text GLabel 6200 2200 2    50   Input ~ 0
+Text GLabel 7800 2150 0    50   Input ~ 0
 RX
 $Comp
 L Device:R R?
 U 1 1 60A47603
-P 6900 1550
+P 7600 1650
 AR Path="/60A3186D/60A47603" Ref="R?"  Part="1" 
 AR Path="/60A47603" Ref="R4"  Part="1" 
-F 0 "R4" H 6970 1596 50  0000 L CNN
-F 1 "10K" H 6970 1505 50  0000 L CNN
-F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" V 6830 1550 50  0001 C CNN
-F 3 "~" H 6900 1550 50  0001 C CNN
-	1    6900 1550
+F 0 "R4" H 7670 1696 50  0000 L CNN
+F 1 "10K" H 7670 1605 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" V 7530 1650 50  0001 C CNN
+F 3 "~" H 7600 1650 50  0001 C CNN
+	1    7600 1650
 	1    0    0    -1  
 $EndComp
-Connection ~ 6550 1400
-Text GLabel 4900 1900 0    50   Input ~ 0
-IO0
-Text GLabel 4900 2900 0    50   Input ~ 0
+Text GLabel 7800 2450 0    50   Input ~ 0
 CHARGE
 Wire Wire Line
-	6650 1800 6550 1800
-Text GLabel 5500 3650 3    50   Input ~ 0
-DAC2
+	7550 4150 7550 4200
 Wire Wire Line
-	4250 1800 4250 1850
-Wire Wire Line
-	3850 1850 4250 1850
-Connection ~ 4250 1850
+	7150 4200 7550 4200
+Connection ~ 7550 4200
 $Comp
 L power:GND #PWR?
 U 1 1 60A47615
-P 4250 2150
+P 7550 4500
 AR Path="/60A3186D/60A47615" Ref="#PWR?"  Part="1" 
 AR Path="/60A47615" Ref="#PWR026"  Part="1" 
-F 0 "#PWR026" H 4250 1900 50  0001 C CNN
-F 1 "GND" H 4255 1977 50  0000 C CNN
-F 2 "" H 4250 2150 50  0001 C CNN
-F 3 "" H 4250 2150 50  0001 C CNN
-	1    4250 2150
+F 0 "#PWR026" H 7550 4250 50  0001 C CNN
+F 1 "GND" H 7555 4327 50  0000 C CNN
+F 2 "" H 7550 4500 50  0001 C CNN
+F 3 "" H 7550 4500 50  0001 C CNN
+	1    7550 4500
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	3850 2150 4250 2150
-Connection ~ 4250 2150
-Wire Wire Line
-	4900 1800 4250 1800
-Connection ~ 4250 1800
-Text GLabel 4900 3100 0    50   Input ~ 0
+	7150 4500 7550 4500
+Connection ~ 7550 4500
+Text GLabel 7800 3650 0    50   Input ~ 0
 STEPX
-Text GLabel 4900 3000 0    50   Input ~ 0
+Text GLabel 7800 3550 0    50   Input ~ 0
 DIRX
-Text GLabel 4900 2000 0    50   Input ~ 0
+Text GLabel 7800 2750 0    50   Input ~ 0
 DIRZ
-Text GLabel 4900 2100 0    50   Input ~ 0
+Text GLabel 7800 3050 0    50   Input ~ 0
 STEPZ
-Wire Wire Line
-	6000 3650 6000 3950
-Text GLabel 6900 1700 3    50   Input ~ 0
-DAC2
 $Comp
 L Regulator_Linear:AZ1117-3.3 U?
 U 1 1 60A4D6FF
@@ -268,10 +206,10 @@ F 3 "" H 3150 1650 50  0001 C CNN
 $EndComp
 $Comp
 L power:+12V #PWR?
-U 1 1 60A4D717
+U 1 1 61ECC604
 P 2750 1100
-AR Path="/60A3186D/60A4D717" Ref="#PWR?"  Part="1" 
-AR Path="/60A4D717" Ref="#PWR014"  Part="1" 
+AR Path="/60A3186D/61ECC604" Ref="#PWR?"  Part="1" 
+AR Path="/61ECC604" Ref="#PWR014"  Part="1" 
 F 0 "#PWR014" H 2750 950 50  0001 C CNN
 F 1 "+12V" H 2765 1273 50  0000 C CNN
 F 2 "" H 2750 1100 50  0001 C CNN
@@ -296,10 +234,10 @@ F 3 "" H 3550 1100 50  0001 C CNN
 $EndComp
 $Comp
 L Device:C C?
-U 1 1 60A4D724
+U 1 1 61ECC606
 P 2750 1500
-AR Path="/60A3186D/60A4D724" Ref="C?"  Part="1" 
-AR Path="/60A4D724" Ref="C1"  Part="1" 
+AR Path="/60A3186D/61ECC606" Ref="C?"  Part="1" 
+AR Path="/61ECC606" Ref="C1"  Part="1" 
 F 0 "C1" H 2865 1546 50  0000 L CNN
 F 1 "22u" H 2865 1455 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder" H 2788 1350 50  0001 C CNN
@@ -449,22 +387,6 @@ F 3 "~" H 1300 1050 50  0001 C CNN
 	1    1300 1050
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	2150 5000 2250 5000
-Wire Wire Line
-	2150 5050 2150 5000
-Wire Wire Line
-	1950 5050 2150 5050
-Wire Wire Line
-	1950 5200 1950 5050
-Wire Wire Line
-	1800 5200 1950 5200
-Wire Wire Line
-	2050 5200 2250 5200
-Wire Wire Line
-	2050 5000 2050 5200
-Wire Wire Line
-	1800 5000 2050 5000
 $Comp
 L Device:CP C3
 U 1 1 60A648EF
@@ -479,9 +401,6 @@ F 3 "~" H 3900 4150 50  0001 C CNN
 	1    3900 4150
 	1    0    0    -1  
 $EndComp
-Connection ~ 3300 4000
-Wire Wire Line
-	3300 4000 3900 4000
 $Comp
 L power:GND #PWR023
 U 1 1 60A648F7
@@ -496,54 +415,10 @@ F 3 "" H 3900 4300 50  0001 C CNN
 	1    3900 4300
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	1800 5100 2250 5100
-Connection ~ 950  5100
-Wire Wire Line
-	950  5200 1300 5200
-Wire Wire Line
-	950  5100 950  5200
-Connection ~ 950  5000
-Wire Wire Line
-	950  5100 1300 5100
-Wire Wire Line
-	950  5000 950  5100
-Wire Wire Line
-	950  5000 1300 5000
-$Comp
-L power:+3V3 #PWR01
-U 1 1 60A64905
-P 950 5000
-AR Path="/60A64905" Ref="#PWR01"  Part="1" 
-AR Path="/6090A275/60A64905" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A64905" Ref="#PWR?"  Part="1" 
-F 0 "#PWR01" H 950 4850 50  0001 C CNN
-F 1 "+3V3" H 965 5173 50  0000 C CNN
-F 2 "" H 950 5000 50  0001 C CNN
-F 3 "" H 950 5000 50  0001 C CNN
-	1    950  5000
-	1    0    0    -1  
-$EndComp
-$Comp
-L Connector_Generic:Conn_02x03_Odd_Even J2
-U 1 1 60A6490B
-P 1500 5100
-AR Path="/60A6490B" Ref="J2"  Part="1" 
-AR Path="/6090A275/60A6490B" Ref="J?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A6490B" Ref="J?"  Part="1" 
-F 0 "J2" H 1550 5417 50  0000 C CNN
-F 1 "Conn_02x03_Odd_Even" H 1550 5326 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical" H 1500 5100 50  0001 C CNN
-F 3 "~" H 1500 5100 50  0001 C CNN
-	1    1500 5100
-	1    0    0    -1  
-$EndComp
 Text GLabel 2250 4800 0    50   Input ~ 0
 DIRX
 Text GLabel 2250 4700 0    50   Input ~ 0
 STEPX
-Text GLabel 2250 4600 0    50   Input ~ 0
-ENX
 Connection ~ 2050 4300
 Wire Wire Line
 	2050 4400 2050 4300
@@ -565,7 +440,6 @@ F 3 "" H 2050 4300 50  0001 C CNN
 	1    2050 4300
 	1    0    0    -1  
 $EndComp
-Connection ~ 2650 5400
 Wire Wire Line
 	2650 5400 2750 5400
 $Comp
@@ -582,66 +456,6 @@ F 3 "" H 2650 5400 50  0001 C CNN
 	1    2650 5400
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	3300 4000 2650 4000
-$Comp
-L power:+12V #PWR018
-U 1 1 60A64927
-P 3300 4000
-AR Path="/60A64927" Ref="#PWR018"  Part="1" 
-AR Path="/6090A275/60A64927" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A64927" Ref="#PWR?"  Part="1" 
-F 0 "#PWR018" H 3300 3850 50  0001 C CNN
-F 1 "+12V" H 3315 4173 50  0000 C CNN
-F 2 "" H 3300 4000 50  0001 C CNN
-F 3 "" H 3300 4000 50  0001 C CNN
-	1    3300 4000
-	1    0    0    -1  
-$EndComp
-$Comp
-L Connector:Conn_01x04_Male J9
-U 1 1 60A64933
-P 4750 4800
-AR Path="/60A64933" Ref="J9"  Part="1" 
-AR Path="/6090A275/60A64933" Ref="J?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A64933" Ref="J?"  Part="1" 
-F 0 "J9" H 4858 5081 50  0000 C CNN
-F 1 "Conn_01x04_Male" H 4858 4990 50  0000 C CNN
-F 2 "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical" H 4750 4800 50  0001 C CNN
-F 3 "~" H 4750 4800 50  0001 C CNN
-	1    4750 4800
-	-1   0    0    1   
-$EndComp
-$Comp
-L Driver_Motor:Pololu_Breakout_DRV8825 A1
-U 1 1 60A64939
-P 2650 4600
-AR Path="/60A64939" Ref="A1"  Part="1" 
-AR Path="/6090A275/60A64939" Ref="A?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A64939" Ref="A?"  Part="1" 
-F 0 "A1" H 2650 5381 50  0000 C CNN
-F 1 "Pololu_Breakout_DRV8825" H 2650 5290 50  0000 C CNN
-F 2 "Module:Pololu_Breakout-16_15.2x20.3mm" H 2850 3800 50  0001 L CNN
-F 3 "https://www.pololu.com/product/2982" H 2750 4300 50  0001 C CNN
-	1    2650 4600
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	2150 7000 2250 7000
-Wire Wire Line
-	2150 7050 2150 7000
-Wire Wire Line
-	1950 7050 2150 7050
-Wire Wire Line
-	1950 7200 1950 7050
-Wire Wire Line
-	1800 7200 1950 7200
-Wire Wire Line
-	2050 7200 2250 7200
-Wire Wire Line
-	2050 7000 2050 7200
-Wire Wire Line
-	1800 7000 2050 7000
 $Comp
 L Device:CP C4
 U 1 1 60A88DBE
@@ -656,9 +470,6 @@ F 3 "~" H 3900 6150 50  0001 C CNN
 	1    3900 6150
 	1    0    0    -1  
 $EndComp
-Connection ~ 3300 6000
-Wire Wire Line
-	3300 6000 3900 6000
 $Comp
 L power:GND #PWR024
 U 1 1 60A88DC6
@@ -673,54 +484,10 @@ F 3 "" H 3900 6300 50  0001 C CNN
 	1    3900 6300
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	1800 7100 2250 7100
-Connection ~ 950  7100
-Wire Wire Line
-	950  7200 1300 7200
-Wire Wire Line
-	950  7100 950  7200
-Connection ~ 950  7000
-Wire Wire Line
-	950  7100 1300 7100
-Wire Wire Line
-	950  7000 950  7100
-Wire Wire Line
-	950  7000 1300 7000
-$Comp
-L power:+3V3 #PWR02
-U 1 1 60A88DD4
-P 950 7000
-AR Path="/60A88DD4" Ref="#PWR02"  Part="1" 
-AR Path="/6090A275/60A88DD4" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88DD4" Ref="#PWR?"  Part="1" 
-F 0 "#PWR02" H 950 6850 50  0001 C CNN
-F 1 "+3V3" H 965 7173 50  0000 C CNN
-F 2 "" H 950 7000 50  0001 C CNN
-F 3 "" H 950 7000 50  0001 C CNN
-	1    950  7000
-	1    0    0    -1  
-$EndComp
-$Comp
-L Connector_Generic:Conn_02x03_Odd_Even J3
-U 1 1 60A88DDA
-P 1500 7100
-AR Path="/60A88DDA" Ref="J3"  Part="1" 
-AR Path="/6090A275/60A88DDA" Ref="J?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88DDA" Ref="J?"  Part="1" 
-F 0 "J3" H 1550 7417 50  0000 C CNN
-F 1 "Conn_02x03_Odd_Even" H 1550 7326 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical" H 1500 7100 50  0001 C CNN
-F 3 "~" H 1500 7100 50  0001 C CNN
-	1    1500 7100
-	1    0    0    -1  
-$EndComp
 Text GLabel 2250 6800 0    50   Input ~ 0
 DIRZ
 Text GLabel 2250 6700 0    50   Input ~ 0
 STEPZ
-Text GLabel 2250 6600 0    50   Input ~ 0
-ENZ
 Connection ~ 2050 6300
 Wire Wire Line
 	2050 6400 2050 6300
@@ -730,11 +497,11 @@ Wire Wire Line
 	2050 6300 2250 6300
 $Comp
 L power:+3V3 #PWR09
-U 1 1 60A88DE7
+U 1 1 61ECC61A
 P 2050 6300
-AR Path="/60A88DE7" Ref="#PWR09"  Part="1" 
-AR Path="/6090A275/60A88DE7" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88DE7" Ref="#PWR?"  Part="1" 
+AR Path="/61ECC61A" Ref="#PWR09"  Part="1" 
+AR Path="/6090A275/61ECC61A" Ref="#PWR?"  Part="1" 
+AR Path="/60A3186D/6090A275/61ECC61A" Ref="#PWR?"  Part="1" 
 F 0 "#PWR09" H 2050 6150 50  0001 C CNN
 F 1 "+3V3" H 2065 6473 50  0000 C CNN
 F 2 "" H 2050 6300 50  0001 C CNN
@@ -747,11 +514,11 @@ Wire Wire Line
 	2650 7400 2750 7400
 $Comp
 L power:GND #PWR013
-U 1 1 60A88DEF
+U 1 1 61ECC61B
 P 2650 7400
-AR Path="/60A88DEF" Ref="#PWR013"  Part="1" 
-AR Path="/6090A275/60A88DEF" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88DEF" Ref="#PWR?"  Part="1" 
+AR Path="/61ECC61B" Ref="#PWR013"  Part="1" 
+AR Path="/6090A275/61ECC61B" Ref="#PWR?"  Part="1" 
+AR Path="/60A3186D/6090A275/61ECC61B" Ref="#PWR?"  Part="1" 
 F 0 "#PWR013" H 2650 7150 50  0001 C CNN
 F 1 "GND" H 2655 7227 50  0000 C CNN
 F 2 "" H 2650 7400 50  0001 C CNN
@@ -759,29 +526,13 @@ F 3 "" H 2650 7400 50  0001 C CNN
 	1    2650 7400
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	3300 6000 2650 6000
-$Comp
-L power:+12V #PWR019
-U 1 1 60A88DF6
-P 3300 6000
-AR Path="/60A88DF6" Ref="#PWR019"  Part="1" 
-AR Path="/6090A275/60A88DF6" Ref="#PWR?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88DF6" Ref="#PWR?"  Part="1" 
-F 0 "#PWR019" H 3300 5850 50  0001 C CNN
-F 1 "+12V" H 3315 6173 50  0000 C CNN
-F 2 "" H 3300 6000 50  0001 C CNN
-F 3 "" H 3300 6000 50  0001 C CNN
-	1    3300 6000
-	1    0    0    -1  
-$EndComp
 $Comp
 L Driver_Motor:Pololu_Breakout_DRV8825 A2
-U 1 1 60A88E08
+U 1 1 61ECC61C
 P 2650 6600
-AR Path="/60A88E08" Ref="A2"  Part="1" 
-AR Path="/6090A275/60A88E08" Ref="A?"  Part="1" 
-AR Path="/60A3186D/6090A275/60A88E08" Ref="A?"  Part="1" 
+AR Path="/61ECC61C" Ref="A2"  Part="1" 
+AR Path="/6090A275/61ECC61C" Ref="A?"  Part="1" 
+AR Path="/60A3186D/6090A275/61ECC61C" Ref="A?"  Part="1" 
 F 0 "A2" H 2650 7381 50  0000 C CNN
 F 1 "Pololu_Breakout_DRV8825" H 2650 7290 50  0000 C CNN
 F 2 "Module:Pololu_Breakout-16_15.2x20.3mm" H 2850 5800 50  0001 L CNN
@@ -789,17 +540,8 @@ F 3 "https://www.pololu.com/product/2982" H 2750 6300 50  0001 C CNN
 	1    2650 6600
 	1    0    0    -1  
 $EndComp
-Text GLabel 4900 3200 0    50   Input ~ 0
-ENX
-Text GLabel 4900 2800 0    50   Input ~ 0
-ENZ
-Wire Wire Line
-	4900 1500 5250 1500
-Wire Wire Line
-	5250 1500 6200 1500
-Connection ~ 5250 1500
-Wire Wire Line
-	6900 1400 6550 1400
+Text GLabel 7800 3850 0    50   Input ~ 0
+ESTOP
 Text GLabel 2300 3150 0    50   Input ~ 0
 IO0
 $Comp
@@ -852,15 +594,13 @@ F 3 "~" H 3450 3300 50  0001 C CNN
 	1    3450 3300
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	6200 1800 6550 1800
 $Comp
 L Connector:Conn_01x04_Male J4
-U 1 1 6113B222
+U 1 1 61ECC61D
 P 1600 2250
-AR Path="/6113B222" Ref="J4"  Part="1" 
-AR Path="/6090A275/6113B222" Ref="J?"  Part="1" 
-AR Path="/60A3186D/6090A275/6113B222" Ref="J?"  Part="1" 
+AR Path="/61ECC61D" Ref="J4"  Part="1" 
+AR Path="/6090A275/61ECC61D" Ref="J?"  Part="1" 
+AR Path="/60A3186D/6090A275/61ECC61D" Ref="J?"  Part="1" 
 F 0 "J4" H 1708 2531 50  0000 C CNN
 F 1 "Conn_01x04_Male" H 1708 2440 50  0000 C CNN
 F 2 "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical" H 1600 2250 50  0001 C CNN
@@ -870,10 +610,10 @@ F 3 "~" H 1600 2250 50  0001 C CNN
 $EndComp
 $Comp
 L power:+3V3 #PWR?
-U 1 1 6113C85F
+U 1 1 61ECC61E
 P 2150 2150
-AR Path="/60A3186D/6113C85F" Ref="#PWR?"  Part="1" 
-AR Path="/6113C85F" Ref="#PWR010"  Part="1" 
+AR Path="/60A3186D/61ECC61E" Ref="#PWR?"  Part="1" 
+AR Path="/61ECC61E" Ref="#PWR010"  Part="1" 
 F 0 "#PWR010" H 2150 2000 50  0001 C CNN
 F 1 "+3V3" H 2165 2323 50  0000 C CNN
 F 2 "" H 2150 2150 50  0001 C CNN
@@ -894,9 +634,9 @@ F 3 "" H 2300 2250 50  0001 C CNN
 	1    2300 2250
 	1    0    0    -1  
 $EndComp
-Text GLabel 5100 3650 3    50   Input ~ 0
+Text GLabel 10550 2400 2    50   Input ~ 0
 LC_CLK
-Text GLabel 5200 3650 3    50   Input ~ 0
+Text GLabel 10550 2500 2    50   Input ~ 0
 LC_DAT
 Text GLabel 1800 2350 2    50   Input ~ 0
 LC_CLK
@@ -984,28 +724,6 @@ Text GLabel 3850 4800 0    50   Input ~ 0
 XB1
 Text GLabel 3850 4900 0    50   Input ~ 0
 XB2
-Text GLabel 4550 4700 0    50   Input ~ 0
-XA1
-Text GLabel 4550 4600 0    50   Input ~ 0
-XA2
-Text GLabel 4550 4800 0    50   Input ~ 0
-XB1
-Text GLabel 4550 4900 0    50   Input ~ 0
-XB2
-$Comp
-L Connector:Conn_01x04_Male J10
-U 1 1 61905A27
-P 4750 6900
-AR Path="/61905A27" Ref="J10"  Part="1" 
-AR Path="/6090A275/61905A27" Ref="J?"  Part="1" 
-AR Path="/60A3186D/6090A275/61905A27" Ref="J?"  Part="1" 
-F 0 "J10" H 4858 7181 50  0000 C CNN
-F 1 "Conn_01x04_Male" H 4858 7090 50  0000 C CNN
-F 2 "Connector_JST:JST_XH_B4B-XH-A_1x04_P2.50mm_Vertical" H 4750 6900 50  0001 C CNN
-F 3 "~" H 4750 6900 50  0001 C CNN
-	1    4750 6900
-	-1   0    0    1   
-$EndComp
 $Comp
 L Connector:Conn_01x04_Male J8
 U 1 1 61905A2D
@@ -1028,14 +746,6 @@ Text GLabel 3850 6900 0    50   Input ~ 0
 ZB1
 Text GLabel 3850 7000 0    50   Input ~ 0
 ZB2
-Text GLabel 4550 6800 0    50   Input ~ 0
-ZA1
-Text GLabel 4550 6700 0    50   Input ~ 0
-ZA2
-Text GLabel 4550 6900 0    50   Input ~ 0
-ZB1
-Text GLabel 4550 7000 0    50   Input ~ 0
-ZB2
 Text GLabel 3050 6500 2    50   Input ~ 0
 ZA1
 Text GLabel 3050 6600 2    50   Input ~ 0
@@ -1044,9 +754,9 @@ Text GLabel 3050 6800 2    50   Input ~ 0
 ZB1
 Text GLabel 3050 6900 2    50   Input ~ 0
 ZB2
-Text GLabel 5300 3650 3    50   Input ~ 0
+Text GLabel 10550 2600 2    50   Input ~ 0
 LC_CLK2
-Text GLabel 5400 3650 3    50   Input ~ 0
+Text GLabel 10550 2700 2    50   Input ~ 0
 LC_DAT2
 Text GLabel 5850 5000 2    50   Input ~ 0
 HOMX
@@ -1134,8 +844,259 @@ F 3 "" H 6250 5550 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6250 5550 5850 5550
-Text GLabel 6200 3100 2    50   Input ~ 0
+Text GLabel 7800 2550 0    50   Input ~ 0
 HOMX
-Text GLabel 6200 3200 2    50   Input ~ 0
+Text GLabel 7800 2650 0    50   Input ~ 0
 HOMZ
+Wire Wire Line
+	10550 4200 10700 4200
+Wire Wire Line
+	10700 4200 10700 4300
+Wire Wire Line
+	10700 4300 10550 4300
+Connection ~ 10700 4300
+Wire Wire Line
+	10700 4300 10700 4350
+Wire Wire Line
+	7550 4200 7800 4200
+Text GLabel 7800 2250 0    50   Input ~ 0
+IO0
+Wire Wire Line
+	7600 1800 7800 1800
+Connection ~ 7600 1800
+Text GLabel 7150 1800 0    50   Input ~ 0
+EN
+Wire Wire Line
+	7150 1800 7600 1800
+Text GLabel 7800 3250 0    50   Input ~ 0
+MSZ
+Text GLabel 7800 3750 0    50   Input ~ 0
+MSX
+$Comp
+L Espressif:ESP32-WROOM-E U?
+U 1 1 61EA4056
+P 9150 2800
+F 0 "U?" H 9175 4615 50  0000 C CNN
+F 1 "ESP32-WROOM-E" H 9175 4524 50  0000 C CNN
+F 2 "Espressif:ESP32-WROOM-32E" H 9150 1050 50  0001 C CNN
+F 3 "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32e_esp32-wroom-32ue_datasheet_en.pdf" H 9550 2800 50  0001 C CNN
+	1    9150 2800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	10550 4100 10700 4100
+Wire Wire Line
+	10700 4100 10700 4200
+Connection ~ 10700 4200
+Text GLabel 10550 1900 2    50   Input ~ 0
+CS0
+Text GLabel 10550 2000 2    50   Input ~ 0
+CS1
+Text GLabel 10550 2100 2    50   Input ~ 0
+MOSI
+Text GLabel 10550 2200 2    50   Input ~ 0
+MISO
+Text GLabel 10550 2300 2    50   Input ~ 0
+CLK
+$Comp
+L power:+12V #PWR?
+U 1 1 61EC47EC
+P 4300 1050
+AR Path="/60A3186D/61EC47EC" Ref="#PWR?"  Part="1" 
+AR Path="/61EC47EC" Ref="#PWR?"  Part="1" 
+F 0 "#PWR?" H 4300 900 50  0001 C CNN
+F 1 "+12V" H 4315 1223 50  0000 C CNN
+F 2 "" H 4300 1050 50  0001 C CNN
+F 3 "" H 4300 1050 50  0001 C CNN
+	1    4300 1050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4400 1050 4300 1050
+$Comp
+L Connector:Screw_Terminal_01x02 J?
+U 1 1 61EC47F4
+P 4600 1050
+AR Path="/60A3186D/61EC47F4" Ref="J?"  Part="1" 
+AR Path="/61EC47F4" Ref="J?"  Part="1" 
+F 0 "J?" H 4680 1042 50  0000 L CNN
+F 1 "Screw_Terminal_01x02" H 4680 951 50  0000 L CNN
+F 2 "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal" H 4600 1050 50  0001 C CNN
+F 3 "~" H 4600 1050 50  0001 C CNN
+	1    4600 1050
+	1    0    0    -1  
+$EndComp
+Text GLabel 4400 1150 0    50   Input ~ 0
+ESTOP12V
+Wire Wire Line
+	2650 4000 3900 4000
+Wire Wire Line
+	2650 6000 3900 6000
+Text GLabel 3900 4000 2    50   Input ~ 0
+ESTOP12V
+Text GLabel 3900 6000 2    50   Input ~ 0
+ESTOP12V
+$Comp
+L power:+3V3 #PWR?
+U 1 1 61ED0FCD
+P 1550 4000
+F 0 "#PWR?" H 1550 3850 50  0001 C CNN
+F 1 "+3V3" H 1565 4173 50  0000 C CNN
+F 2 "" H 1550 4000 50  0001 C CNN
+F 3 "" H 1550 4000 50  0001 C CNN
+	1    1550 4000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 4000 1200 4000
+Text GLabel 1200 4500 2    50   Input ~ 0
+MOSI
+Text GLabel 1200 4300 2    50   Input ~ 0
+MISO
+Text GLabel 1200 4200 2    50   Input ~ 0
+CLK
+Text GLabel 1200 4400 2    50   Input ~ 0
+CS0
+$Comp
+L power:GND #PWR?
+U 1 1 61ED0FD8
+P 1550 4100
+F 0 "#PWR?" H 1550 3850 50  0001 C CNN
+F 1 "GND" H 1555 3927 50  0000 C CNN
+F 2 "" H 1550 4100 50  0001 C CNN
+F 3 "" H 1550 4100 50  0001 C CNN
+	1    1550 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x06_Male J?
+U 1 1 61ED0FDE
+P 1000 4200
+F 0 "J?" H 1108 4581 50  0000 C CNN
+F 1 "Conn_01x06_Male" H 1108 4490 50  0000 C CNN
+F 2 "Connector_JST:JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical" H 1000 4200 50  0001 C CNN
+F 3 "~" H 1000 4200 50  0001 C CNN
+	1    1000 4200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 4100 1200 4100
+$Comp
+L power:+3V3 #PWR?
+U 1 1 61ED4011
+P 1550 5950
+F 0 "#PWR?" H 1550 5800 50  0001 C CNN
+F 1 "+3V3" H 1565 6123 50  0000 C CNN
+F 2 "" H 1550 5950 50  0001 C CNN
+F 3 "" H 1550 5950 50  0001 C CNN
+	1    1550 5950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 5950 1200 5950
+Text GLabel 1200 6450 2    50   Input ~ 0
+MOSI
+Text GLabel 1200 6250 2    50   Input ~ 0
+MISO
+Text GLabel 1200 6150 2    50   Input ~ 0
+CLK
+Text GLabel 1200 6350 2    50   Input ~ 0
+CS1
+$Comp
+L power:GND #PWR?
+U 1 1 61ED401C
+P 1550 6050
+F 0 "#PWR?" H 1550 5800 50  0001 C CNN
+F 1 "GND" H 1555 5877 50  0000 C CNN
+F 2 "" H 1550 6050 50  0001 C CNN
+F 3 "" H 1550 6050 50  0001 C CNN
+	1    1550 6050
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x06_Male J?
+U 1 1 61ED4022
+P 1000 6150
+F 0 "J?" H 1108 6531 50  0000 C CNN
+F 1 "Conn_01x06_Male" H 1108 6440 50  0000 C CNN
+F 2 "Connector_JST:JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical" H 1000 6150 50  0001 C CNN
+F 3 "~" H 1000 6150 50  0001 C CNN
+	1    1000 6150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 6050 1200 6050
+$Comp
+L Device:R R?
+U 1 1 61EDD0A3
+P 4600 1850
+AR Path="/60A3186D/61EDD0A3" Ref="R?"  Part="1" 
+AR Path="/61EDD0A3" Ref="R?"  Part="1" 
+F 0 "R?" H 4670 1896 50  0000 L CNN
+F 1 "47k" H 4670 1805 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" V 4530 1850 50  0001 C CNN
+F 3 "~" H 4600 1850 50  0001 C CNN
+	1    4600 1850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 61EDD0A9
+P 4600 2150
+AR Path="/60A3186D/61EDD0A9" Ref="R?"  Part="1" 
+AR Path="/61EDD0A9" Ref="R?"  Part="1" 
+F 0 "R?" H 4670 2196 50  0000 L CNN
+F 1 "10K" H 4670 2105 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder" V 4530 2150 50  0001 C CNN
+F 3 "~" H 4600 2150 50  0001 C CNN
+	1    4600 2150
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 61EDD0AF
+P 4600 2300
+AR Path="/60A3186D/61EDD0AF" Ref="#PWR?"  Part="1" 
+AR Path="/61EDD0AF" Ref="#PWR?"  Part="1" 
+F 0 "#PWR?" H 4600 2050 50  0001 C CNN
+F 1 "GND" H 4605 2127 50  0000 C CNN
+F 2 "" H 4600 2300 50  0001 C CNN
+F 3 "" H 4600 2300 50  0001 C CNN
+	1    4600 2300
+	1    0    0    -1  
+$EndComp
+Text GLabel 4550 2000 0    50   Input ~ 0
+ESTOP
+Wire Wire Line
+	4550 2000 4600 2000
+Connection ~ 4600 2000
+Text GLabel 4600 1650 0    50   Input ~ 0
+ESTOP12V
+Wire Wire Line
+	4600 1700 4600 1650
+Connection ~ 2650 5400
+$Comp
+L Driver_Motor:Pololu_Breakout_DRV8825 A1
+U 1 1 61ECC615
+P 2650 4600
+AR Path="/61ECC615" Ref="A1"  Part="1" 
+AR Path="/6090A275/61ECC615" Ref="A?"  Part="1" 
+AR Path="/60A3186D/6090A275/61ECC615" Ref="A?"  Part="1" 
+F 0 "A1" H 2650 5381 50  0000 C CNN
+F 1 "Pololu_Breakout_DRV8825" H 2650 5290 50  0000 C CNN
+F 2 "Module:Pololu_Breakout-16_15.2x20.3mm" H 2850 3800 50  0001 L CNN
+F 3 "https://www.pololu.com/product/2982" H 2750 4300 50  0001 C CNN
+	1    2650 4600
+	1    0    0    -1  
+$EndComp
+Text GLabel 2250 7200 0    50   Input ~ 0
+MSZ
+Text GLabel 2250 5200 0    50   Input ~ 0
+MSX
+Text GLabel 10550 2800 2    50   Input ~ 0
+EN_STEP
+Text GLabel 2250 4600 0    50   Input ~ 0
+EN_STEP
+Text GLabel 2250 6600 0    50   Input ~ 0
+EN_STEP
 $EndSCHEMATC
