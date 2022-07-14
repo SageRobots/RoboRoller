@@ -8,6 +8,7 @@
 #include "stepper.h"
 #include "driver/timer.h"
 #include <hx711.h>
+#include "stepper.h"
 
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
@@ -152,6 +153,53 @@ void wifiInit(void) {
     vEventGroupDelete(wifiEventGroup);
 }
 
+static esp_err_t get_handler(httpd_req_t *req) {
+    extern const unsigned char index_html_start[] asm("_binary_index_html_start");
+    extern const unsigned char index_html_end[]   asm("_binary_index_html_end");
+    const size_t index_html_size = (index_html_end - index_html_start);
+    httpd_resp_send_chunk(req, (const char *)index_html_start, index_html_size);
+    /* Send empty chunk to signal HTTP response completion */
+    httpd_resp_sendstr_chunk(req, NULL);
+
+    return ESP_OK;
+}
+
+static esp_err_t get_handler_2(httpd_req_t *req) {
+    char uri8[9];
+    strncpy(uri8, req->uri, 8);
+    uri8[8] = 0;
+
+    if (!strcmp(req->uri,"/battery")) {
+        //return the battery voltage
+        int len = snprintf(NULL, 0, "%.2f", battery);
+        char *result = (char *)malloc(len + 1);
+        snprintf(result, len + 1, "%.2f", battery);
+        httpd_resp_sendstr(req, result);
+
+    } else if (!strcmp(req->uri,"/pos")) {
+        int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
+            motorX.currentPos, motorZ.currentPos, currentForce);
+        char *result = (char *)malloc(len + 1);
+        snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
+            motorX.currentPos, motorZ.currentPos, currentForce);
+        httpd_resp_sendstr(req, result);
+
+    } else if (!strcmp(req->uri,"/stop")) {
+        motorX.targetSteps = motorX.currentSteps;
+        motorZ.targetSteps = motorZ.currentSteps;
+        cycle.cycling = false;
+
+    } else if (!strcmp(uri8, "/moveAbs")) {
+        printf("moveAbs\n");
+    
+    } else {
+        printf("URI: ");
+        printf(req->uri);
+        printf("\n");
+    }
+    return ESP_OK;
+}
+
 static httpd_handle_t start_webserver(void) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -159,45 +207,6 @@ static httpd_handle_t start_webserver(void) {
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
-        httpd_uri_t move_uri = {
-            .uri       = "/moveAbs*",  // Match all URIs of type /path/to/file
-            .method    = HTTP_GET,
-            .handler   = get_handler_move,
-            .user_ctx  = NULL   // Pass server data as context
-        };
-        httpd_register_uri_handler(server, &move_uri);
-
-        httpd_uri_t speeds_uri = {
-            .uri       = "/speeds*",  // Match all URIs of type /path/to/file
-            .method    = HTTP_GET,
-            .handler   = get_handler_speeds,
-            .user_ctx  = NULL   // Pass server data as context
-        };
-        httpd_register_uri_handler(server, &speeds_uri);
-
-        httpd_uri_t force_uri = {
-            .uri       = "/force*",  // Match all URIs of type /path/to/file
-            .method    = HTTP_GET,
-            .handler   = get_handler_force,
-            .user_ctx  = NULL   // Pass server data as context
-        };
-        httpd_register_uri_handler(server, &force_uri);
-
-        httpd_uri_t zero_uri = {
-            .uri       = "/zero*", 
-            .method    = HTTP_GET,
-            .handler   = get_handler_zero,
-            .user_ctx  = NULL
-        };
-        httpd_register_uri_handler(server, &zero_uri);
-
-        httpd_uri_t cycle_uri = {
-            .uri       = "/cycle*",
-            .method    = HTTP_GET,
-            .handler   = get_handler_cycle,
-            .user_ctx  = NULL
-        };
-        httpd_register_uri_handler(server, &cycle_uri);
 
         httpd_uri_t get_uri_1 = {
             .uri       = "/",
@@ -208,7 +217,7 @@ static httpd_handle_t start_webserver(void) {
         httpd_register_uri_handler(server, &get_uri_1);
 
         httpd_uri_t file_download = {
-            .uri       = "/*",  // Match all URIs of type /path/to/file
+            .uri       = "/*",
             .method    = HTTP_GET,
             .handler   = get_handler_2,
             .user_ctx  = NULL   // Pass server data as context
