@@ -2,14 +2,20 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
+#include "esp_log.h"
+#include "esp_http_server.h"
 #include "driver/gpio.h"
+#include "esp_sleep.h"
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
+#include <math.h>
 #include "stepper.h"
 #include "driver/timer.h"
 #include <hx711.h>
 #include "stepper.h"
 
+#define WIFI_SSID      CONFIG_ESP_WIFI_SSID
+#define WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to s
@@ -45,6 +51,10 @@ const int pinCS1 = 18;
 
 const int pinCharge = ADC1_CHANNEL_0;
 const int pinEStop = ADC2_CHANNEL_3;
+
+//init motors
+Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX);
+Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ);
 
 float battery;
 
@@ -563,9 +573,9 @@ extern "C" void app_main(void) {
     io_conf.pin_bit_mask = 1ULL<<pinDirX|1ULL<<pinStepX|1ULL<<pinMSX|1ULL<<pinEn;
     io_conf.pin_bit_mask |= 1ULL<<pinDirZ|1ULL<<pinStepZ|1ULL<<pinMSZ;
     //disable pull-down mode
-    io_conf.pull_down_en = 0;
+    io_conf.pull_down_en = (gpio_pulldown_t)0;
     //disable pull-up mode
-    io_conf.pull_up_en = 0;
+    io_conf.pull_up_en = (gpio_pullup_t)0;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
@@ -573,27 +583,24 @@ extern "C" void app_main(void) {
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT;
     io_conf.pin_bit_mask = 1ULL<<pinHomX|1ULL<<pinHomZ;
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 1;
+    io_conf.pull_down_en = (gpio_pulldown_t)0;
+    io_conf.pull_up_en = (gpio_pullup_t)1;
     gpio_config(&io_conf);
 
     //configure ADCs
-    adc1_config_channel_atten((adc_channel_t)pinCharge, atten);
-    adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+    adc1_config_channel_atten((adc1_channel_t)pinCharge, atten);
+    adcCharsCharge = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adcCharsCharge);
-    adc2_config_channel_atten((adc_channel_t)pinEStop, atten);
+    adc2_config_channel_atten((adc2_channel_t)pinEStop, atten);
+    adcCharsEStop = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_2, atten, width, DEFAULT_VREF, adcCharsEStop);
 
-    //init motors
-    Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX);
-    Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ);
-
-    tg0_timer_init(TIMER_0, 1, TIMER_INTERVAL0_S);
+    tg0_timer_init(TIMER_0, (timer_idx_t)1, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
        (void *) TIMER_0, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_0);
 
-    tg0_timer_init(TIMER_1, 0, TIMER_INTERVAL1_S);
+    tg0_timer_init(TIMER_1, (timer_idx_t)0, TIMER_INTERVAL1_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
        (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_1);
@@ -612,21 +619,20 @@ extern "C" void app_main(void) {
         if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
             uint32_t adc_reading = 0;
-            int raw = adc1_get_raw((adc_channel_t)pinCharge);
-            adc_reading = raw;
+            int raw = adc1_get_raw((adc1_channel_t)pinCharge);
             //Convert adc_reading to voltage in mV
-            uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adcCharsCharge);
+            uint32_t voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsCharge);
             battery = (float)voltage*57.0/10000.0;
             //if voltage is too low, deep sleep indefinitely
             if(battery < 9.6) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            raw = adc2_get_raw((adc_channel_t)pinEStop, width);
-            adc_reading = raw;
+            adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
             //Convert adc_reading to voltage in mV
             voltage = esp_adc_cal_raw_to_voltage(adc_reading, adcCharsEStop);
             float eStop = (float)voltage*57.0/10000.0;
+            printf("eStop voltage: %.3f\n", eStop);
             // printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
             printf("currectForce %.1f\t FL %.1f\t FR %.1f\n", currentForce, forceL, forceR);
             timePrint = timeNow;
