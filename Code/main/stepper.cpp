@@ -10,6 +10,7 @@ Stepper::Stepper(int pinStep, int pinDir, int pinHome, int pinCS, int pinMS) {
 	target = 0;
 	error = 0;
 	anglePrev = 0;
+	stepsPer_mm = 200.0/8.0;
 }
 
 void Stepper::home() {
@@ -20,14 +21,14 @@ void Stepper::home() {
 }
 
 void Stepper::update(spi_device_handle_t spi) {
-	if(gpio_get_level(pinHome) && !homed) {
+	if(gpio_get_level((gpio_num_t)pinHome) && !homed) {
 		homed = true;
 		position = 0;
 	}
 
 	//get encoder angle
 	spi_transaction_t t;
-	gpio_set_level(pinCS, 0);
+	gpio_set_level((gpio_num_t)pinCS, 0);
 	memset(&t, 0, sizeof(t));
 	t.length = 16;
 	// 0x3fff = 11111111111111, set 14 to 1 for read, set parity bit to 1
@@ -35,7 +36,7 @@ void Stepper::update(spi_device_handle_t spi) {
 	t.tx_buffer = &cmd;
 	t.flags = SPI_TRANS_USE_RXDATA;
 	spi_device_transmit(spi, &t);
-	gpio_set_level(pinCS, 1);
+	gpio_set_level((gpio_num_t)pinCS, 1);
 	//check parity
 	bool even = true;
 	for(int j=0; j<2; j++) {
@@ -54,8 +55,10 @@ void Stepper::update(spi_device_handle_t spi) {
 
 void Stepper::microstep(bool on) {
 	if(on) {
-		gpio_set_level(pinMS, 1);
+		gpio_set_level((gpio_num_t)pinMS, 1);
+		stepsPer_mm = 200.0*16.0/8.0;
 	} else {
-		gpio_set_level(pinMS, 0);
+		gpio_set_level((gpio_num_t)pinMS, 0);
+		stepsPer_mm = 200.0/8.0;
 	}
 }

@@ -11,6 +11,7 @@
 #include <math.h>
 #include "stepper.h"
 #include "driver/timer.h"
+#include "driver/spi_master.h"
 #include <hx711.h>
 #include "stepper.h"
 
@@ -371,20 +372,29 @@ static void enc_task(void *arg) {
     esp_err_t ret;
     spi_device_handle_t spi;
     spi_bus_config_t buscfg={
-        .miso_io_num=pinMiso,
-        .mosi_io_num=pinMosi,
+        .miso_io_num=pinMISO,
+        .mosi_io_num=pinMOSI,
         .sclk_io_num=pinClk,
         .quadwp_io_num=-1,
         .quadhd_io_num=-1
     };
     spi_device_interface_config_t devcfg={
-        .clock_speed_hz=5000000,
-        .mode=1,
-        .spics_io_num=-1,   //CS pins manually implemented
-        .address_bits = 0,
         .command_bits = 0,
-        .queue_size = 7
+        .address_bits = 0,
+        .dummy_bits = 0,
+        .mode=1,
+        .duty_cycle_pos = 128,
+        .cs_ena_pretrans = 0,
+        .cs_ena_posttrans = 0,
+        .clock_speed_hz=5000000,
+        .input_delay_ns = 0,
+        .spics_io_num=-1,   //CS pins manually implemented
+        .flags = 0,
+        .queue_size = 7,
+        .pre_cb = void,
+        .post_cb = void
     };
+    esp_err_t ret;
     ret=spi_bus_initialize(SPI2_HOST, &buscfg, 0);
     ESP_ERROR_CHECK(ret);
     ret=spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
@@ -399,8 +409,8 @@ static void enc_task(void *arg) {
 
 void loadCell(void *pvParameters) {
     hx711_t dev = {
-        .dout = pinLCDat,
-        .pd_sck = pinLCClk,
+        .dout = (gpio_num_t)pinLCDat,
+        .pd_sck = (gpio_num_t)pinLCClk,
         .gain = HX711_GAIN_A_64
     };
 
@@ -442,8 +452,8 @@ void loadCell(void *pvParameters) {
 
 void loadCell2(void *pvParameters) {
     hx711_t dev = {
-        .dout = pinLCDat2,
-        .pd_sck = pinLCClk2,
+        .dout = (gpio_num_t)pinLCDat2,
+        .pd_sck = (gpio_num_t)pinLCClk2,
         .gain = HX711_GAIN_A_64
     };
 
@@ -494,16 +504,14 @@ void runCycle() {
     switch(cycle.step) {
         case 0: //move to start x and start z
         targetForce = 0;
-        motorX.targetPos = cycle.startX;
-        motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+        motorX.target = cycle.startX;
         motorX.complete = false;
-        motorX.speedCount = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorX.intrInterval = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
 
         targetForce = 0;
-        motorZ.targetPos = cycle.startZ;
-        motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+        motorZ.target = cycle.startZ;
         motorZ.complete = false;
-        motorZ.speedCount = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
 
         cycle.step = 10;
         break;
@@ -518,9 +526,8 @@ void runCycle() {
         break;
 
         case 30: // move to end x
-        motorX.speedCount = 1.0/(cycle.speed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
-        motorX.targetPos = cycle.endX;
-        motorX.targetSteps = motorX.targetPos*motorX.stepsPer_mm;
+        motorX.intrInterval = 1.0/(cycle.speed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorX.target = cycle.endX;
         motorX.complete = false;
         cycle.step = 40;
         break;
@@ -530,10 +537,9 @@ void runCycle() {
         break;
 
         case 50: // set force to 0 and move to start z
-        motorZ.speedCount = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
         targetForce = 0;
-        motorZ.targetPos = cycle.startZ;
-        motorZ.targetSteps = motorZ.targetPos*motorZ.stepsPer_mm;
+        motorZ.target = cycle.startZ;
         motorZ.complete = false;
         cycle.step = 60;
         break;
