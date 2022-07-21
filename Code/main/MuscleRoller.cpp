@@ -31,24 +31,24 @@ static esp_adc_cal_characteristics_t *adcCharsCharge, *adcCharsEStop;
 static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
 static const adc_atten_t atten = ADC_ATTEN_11db;
 
-const int pinDirZ = 33;
-const int pinStepZ = 25;
-const int pinMSZ = 26;
-const int pinEn = 32;
-const int pinDirX = 39;
-const int pinStepX = 34;
-const int pinMSX = 35;
-const int pinLCClk = 27;
-const int pinLCDat = 14;
-const int pinLCClk2 = 12;
-const int pinLCDat2 = 13;
-const int pinHomZ = 19;
-const int pinHomX = 21;
-const int pinClk = 4;
-const int pinMOSI = 5;
-const int pinMISO = 16;
-const int pinCS0 = 17;
-const int pinCS1 = 18;
+const gpio_num_t pinDirZ = (gpio_num_t)33;
+const gpio_num_t pinStepZ = (gpio_num_t)25;
+const gpio_num_t pinMSZ = (gpio_num_t)26;
+const gpio_num_t pinEn = (gpio_num_t)32;
+const gpio_num_t pinDirX = (gpio_num_t)39;
+const gpio_num_t pinStepX = (gpio_num_t)34;
+const gpio_num_t pinMSX = (gpio_num_t)35;
+const gpio_num_t pinLCClk = (gpio_num_t)27;
+const gpio_num_t pinLCDat = (gpio_num_t)14;
+const gpio_num_t pinLCClk2 = (gpio_num_t)12;
+const gpio_num_t pinLCDat2 = (gpio_num_t)13;
+const gpio_num_t pinHomZ = (gpio_num_t)19;
+const gpio_num_t pinHomX = (gpio_num_t)21;
+const gpio_num_t pinClk = (gpio_num_t)4;
+const gpio_num_t pinMOSI = (gpio_num_t)5;
+const gpio_num_t pinMISO = (gpio_num_t)16;
+const gpio_num_t pinCS0 = (gpio_num_t)17;
+const gpio_num_t pinCS1 = (gpio_num_t)18;
 
 const int pinCharge = ADC1_CHANNEL_0;
 const int pinEStop = ADC2_CHANNEL_3;
@@ -127,19 +127,15 @@ void wifiInit(void) {
                                                         &event_handler,
                                                         NULL,
                                                         &instance_got_ip));
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
-         .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-            .pmf_cfg = {
-                .capable = true,
-                .required = false
-            },
-        },
-    };
+    wifi_config_t wifi_config = {};
+    strcpy((char*)wifi_config.sta.ssid, WIFI_SSID);
+    strcpy((char*)wifi_config.sta.password, WIFI_PASS);
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_config.sta.pmf_cfg.capable = true;
+    wifi_config.sta.pmf_cfg.required = false;
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
@@ -189,15 +185,15 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
 
     } else if (!strcmp(req->uri,"/pos")) {
         int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
-            motorX.currentPos, motorZ.currentPos, currentForce);
+            motorX.position, motorZ.position, currentForce);
         char *result = (char *)malloc(len + 1);
         snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
-            motorX.currentPos, motorZ.currentPos, currentForce);
+            motorX.position, motorZ.position, currentForce);
         httpd_resp_sendstr(req, result);
 
     } else if (!strcmp(req->uri,"/stop")) {
-        motorX.targetSteps = motorX.currentSteps;
-        motorZ.targetSteps = motorZ.currentSteps;
+        motorX.target = motorX.position;
+        motorZ.target = motorZ.position;
         cycle.cycling = false;
 
     } else if (!strcmp(uri8, "/moveAbs")) {
@@ -277,7 +273,7 @@ void IRAM_ATTR timer_0_isr(void *para) {
     if(motorX.intrCount >= motorX.intrInterval) {
         motorX.intrCount = 0;
 
-        if(motorX.error > 0.25) {
+        if(fabs(motorX.error) > 0.25) {
             stepX = true;
         } else {
             motorX.complete = true;
@@ -285,38 +281,20 @@ void IRAM_ATTR timer_0_isr(void *para) {
     }
 
     //motorZ
-    if(motorZ.intrCount >= motorZ.speedCount) {
+    if(motorZ.intrCount >= motorZ.intrInterval) {
         motorZ.intrCount = 0;
-        motorZ.currentPos = motorZ.currentSteps/motorZ.stepsPer_mm;
 
         if(targetForce == 0) { //position mode
-            motorZ.stepsToTarget = motorZ.targetSteps - motorZ.currentSteps;
-
-            if(motorZ.stepsToTarget > 0) {
-                gpio_set_level(motorZ.pinDir, 1);
-                motorZ.currentSteps++;
-            } else if (motorZ.stepsToTarget < 0) {
-                gpio_set_level(motorZ.pinDir, 0);
-                motorZ.currentSteps--;
-            }
-            if(motorZ.stepsToTarget != 0) {
+            if(fabs(motorZ.error) > 0.25) {
                 stepZ = true;
             } else {
                 motorZ.complete = true;
             }
-
         } else { //force mode
-            if(currentForce > targetForce + forceTolerance) {
-                gpio_set_level(motorZ.pinDir, 1);
-                motorZ.currentSteps++;
-                stepZ = true;
-            } else if (currentForce < targetForce - forceTolerance) {
-                gpio_set_level(motorZ.pinDir, 0);
-                motorZ.currentSteps--;
+            if(fabs(motorZ.forceError) > 0.25) {
                 stepZ = true;
             }
         }
-
     }
 
     if(stepX) gpio_set_level(motorX.pinStep, 1);
@@ -342,15 +320,16 @@ void IRAM_ATTR timer_1_isr(void *para) {
     timer_spinlock_give(TIMER_GROUP_0);
 }
 
-static void tg0_timer_init(int timer_idx,
-                                   bool auto_reload, double timer_interval_ms) {
+static void tg0_timer_init(timer_idx_t timer_idx,
+                                   timer_autoreload_t auto_reload, double timer_interval_ms) {
     /* Select and initialize basic parameters of the timer */
     timer_config_t config = {
-        .divider = TIMER_DIVIDER,
-        .counter_dir = TIMER_COUNT_UP,
-        .counter_en = TIMER_PAUSE,
         .alarm_en = TIMER_ALARM_EN,
+        .counter_en = TIMER_PAUSE,
+        .intr_type = TIMER_INTR_LEVEL,
+        .counter_dir = TIMER_COUNT_UP,
         .auto_reload = auto_reload,
+        .divider = TIMER_DIVIDER,
     }; // default clock source is APB
     timer_init(TIMER_GROUP_0, timer_idx, &config);
 
@@ -371,30 +350,38 @@ static void enc_task(void *arg) {
     //create SPI
     esp_err_t ret;
     spi_device_handle_t spi;
-    spi_bus_config_t buscfg={
-        .miso_io_num=pinMISO,
-        .mosi_io_num=pinMOSI,
-        .sclk_io_num=pinClk,
-        .quadwp_io_num=-1,
-        .quadhd_io_num=-1
-    };
-    spi_device_interface_config_t devcfg={
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .mode=1,
-        .duty_cycle_pos = 128,
-        .cs_ena_pretrans = 0,
-        .cs_ena_posttrans = 0,
-        .clock_speed_hz=5000000,
-        .input_delay_ns = 0,
-        .spics_io_num=-1,   //CS pins manually implemented
-        .flags = 0,
-        .queue_size = 7,
-        .pre_cb = void,
-        .post_cb = void
-    };
-    esp_err_t ret;
+    spi_bus_config_t buscfg={};
+    buscfg.mosi_io_num=pinMOSI;
+    buscfg.data0_io_num=-1;
+    buscfg.miso_io_num=pinMISO;
+    buscfg.data1_io_num=-1;
+    buscfg.sclk_io_num=pinClk;
+    buscfg.quadwp_io_num=-1;
+    buscfg.data2_io_num=-1;
+    buscfg.quadhd_io_num=-1;
+    buscfg.data3_io_num=-1;
+    buscfg.data4_io_num=-1;
+    buscfg.data5_io_num=-1;
+    buscfg.data6_io_num=-1;
+    buscfg.data7_io_num=-1;
+    buscfg.max_transfer_sz=0;
+    buscfg.flags=0;
+    buscfg.intr_flags=0;
+
+    spi_device_interface_config_t devcfg={};
+    devcfg.command_bits = 0;
+    devcfg.address_bits = 0;
+    devcfg.dummy_bits = 0;
+    devcfg.mode=1;
+    devcfg.duty_cycle_pos = 128;
+    devcfg.cs_ena_pretrans = 0;
+    devcfg.cs_ena_posttrans = 0;
+    devcfg.clock_speed_hz=5000000;
+    devcfg.input_delay_ns = 0;
+    devcfg.spics_io_num=-1;   //CS pins manually implemented
+    devcfg.flags = 0;
+    devcfg.queue_size = 7;
+
     ret=spi_bus_initialize(SPI2_HOST, &buscfg, 0);
     ESP_ERROR_CHECK(ret);
     ret=spi_bus_add_device(SPI2_HOST, &devcfg, &spi);
@@ -555,8 +542,7 @@ void zSpeed() {
     float speed = kp*error;
     if(speed > 20) speed = 20;
     if(speed < 0.5) speed = 0.5;
-    double stepsPer_mm = 200.0/8.0*motorZ.microstep;
-    motorZ.intrInterval = 1.0/(speed*stepsPer_mm*TIMER_INTERVAL0_S);
+    motorZ.intrInterval = 1.0/(speed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
 extern "C" void app_main(void) {
@@ -601,12 +587,12 @@ extern "C" void app_main(void) {
     adcCharsEStop = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_2, atten, width, DEFAULT_VREF, adcCharsEStop);
 
-    tg0_timer_init(TIMER_0, (timer_idx_t)1, TIMER_INTERVAL0_S);
+    tg0_timer_init(TIMER_0, TIMER_AUTORELOAD_EN, TIMER_INTERVAL0_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
        (void *) TIMER_0, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_0);
 
-    tg0_timer_init(TIMER_1, (timer_idx_t)0, TIMER_INTERVAL1_S);
+    tg0_timer_init(TIMER_1, TIMER_AUTORELOAD_DIS, TIMER_INTERVAL1_S);
     timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
        (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_start(TIMER_GROUP_0, TIMER_1);

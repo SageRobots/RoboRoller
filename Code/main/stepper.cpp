@@ -1,6 +1,6 @@
 #include "stepper.h"
 
-Stepper::Stepper(int pinStep, int pinDir, int pinHome, int pinCS, int pinMS) {
+Stepper::Stepper(gpio_num_t pinStep, gpio_num_t pinDir, gpio_num_t pinHome, gpio_num_t pinCS, gpio_num_t pinMS) {
 	pinDir = pinDir;
 	pinHome = pinHome;
 	pinCS = pinCS;
@@ -21,7 +21,7 @@ void Stepper::home() {
 }
 
 void Stepper::update(spi_device_handle_t spi) {
-	if(gpio_get_level((gpio_num_t)pinHome) && !homed) {
+	if(gpio_get_level(pinHome) && !homed) {
 		homed = true;
 		position = 0;
 	}
@@ -36,7 +36,7 @@ void Stepper::update(spi_device_handle_t spi) {
 	t.tx_buffer = &cmd;
 	t.flags = SPI_TRANS_USE_RXDATA;
 	spi_device_transmit(spi, &t);
-	gpio_set_level((gpio_num_t)pinCS, 1);
+	gpio_set_level(pinCS, 1);
 	//check parity
 	bool even = true;
 	for(int j=0; j<2; j++) {
@@ -51,14 +51,31 @@ void Stepper::update(spi_device_handle_t spi) {
 		position += (angleNow - anglePrev)/360.0*8.0; //8mm per rev
 		anglePrev = angleNow;
 	}
+
+	// update error
+	error = target - position;
+	// update direction
+	if (targetForce == 0) {
+		if (error > 0) {
+			gpio_set_level(pinDir, 0);
+		} else {
+			gpio_set_level(pinDir, 1);
+		}
+	} else {
+		if (forceError > 0) {
+			gpio_set_level(pinDir, 0);
+		} else {
+			gpio_set_level(pinDir, 1);
+		}
+	}
 }
 
 void Stepper::microstep(bool on) {
 	if(on) {
-		gpio_set_level((gpio_num_t)pinMS, 1);
+		gpio_set_level(pinMS, 1);
 		stepsPer_mm = 200.0*16.0/8.0;
 	} else {
-		gpio_set_level((gpio_num_t)pinMS, 0);
+		gpio_set_level(pinMS, 0);
 		stepsPer_mm = 200.0/8.0;
 	}
 }

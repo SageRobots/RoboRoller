@@ -6,16 +6,16 @@
 
 class Stepper {
 	public:
-		int pinStep, pinDir, pinHome, pinCS, pinMS;
+		gpio_num_t pinStep, pinDir, pinHome, pinCS, pinMS;
 		int intrCount;
 		int intrInterval;
-		double position, target;
-		double error;
+		double position, target, targetForce;
+		double error, forceError;
 		bool complete, homing, homed;
 		double anglePrev;
 		int stepsPer_mm;
 
-		Stepper(int pinStep, int pinDir, int pinHome, int pinCS, int pinMS);
+		Stepper(gpio_num_t pinStep, gpio_num_t pinDir, gpio_num_t pinHome, gpio_num_t pinCS, gpio_num_t pinMS);
 
 		void home();
 		void update(spi_device_handle_t spi);
