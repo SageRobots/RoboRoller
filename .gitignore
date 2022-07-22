@@ -4,3 +4,7 @@ BOM.htm
 *.sch-bak
 *.kicad_pcb-bak
 Code/build/
+SPI_Test/
+Code/sdkconfig
+Code/main/Kconfig.projbuild
+Code/sdkconfig.old

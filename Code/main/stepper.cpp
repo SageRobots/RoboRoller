@@ -1,16 +1,23 @@
 #include "stepper.h"
 
-Stepper::Stepper(gpio_num_t pinStep, gpio_num_t pinDir, gpio_num_t pinHome, gpio_num_t pinCS, gpio_num_t pinMS) {
-	pinDir = pinDir;
-	pinHome = pinHome;
-	pinCS = pinCS;
+Stepper::Stepper(gpio_num_t step, gpio_num_t dir, gpio_num_t home, gpio_num_t CS, gpio_num_t MS, bool invert) {
+	pinStep = step;
+	pinDir = dir;
+	pinHome = home;
+	pinCS = CS;
+	pinMS = MS;
 	intrCount = 0;
 	intrInterval = 100;
 	position = 500;
 	target = 0;
 	error = 0;
+	forceError = 0;
+	bPosError = false;
+	bForceError = false;
+	bPosMode = true;
 	anglePrev = 0;
 	stepsPer_mm = 200.0/8.0;
+	invertPos = invert;
 }
 
 void Stepper::home() {
@@ -28,7 +35,7 @@ void Stepper::update(spi_device_handle_t spi) {
 
 	//get encoder angle
 	spi_transaction_t t;
-	gpio_set_level((gpio_num_t)pinCS, 0);
+	gpio_set_level(pinCS, 0);
 	memset(&t, 0, sizeof(t));
 	t.length = 16;
 	// 0x3fff = 11111111111111, set 14 to 1 for read, set parity bit to 1
@@ -48,20 +55,55 @@ void Stepper::update(spi_device_handle_t spi) {
 		uint16_t trim = 0b0011111111111111;
 		uint16_t angle = ((t.rx_data[0]<<8) + t.rx_data[1]) & trim;
 		float angleNow = (float)angle/16383.0*360.0;
-		position += (angleNow - anglePrev)/360.0*8.0; //8mm per rev
+		float tempPos;
+
+		if(invertPos) {
+			tempPos = -position;
+		} else {
+			tempPos = position;
+		}
+
+		//if angle went from near 360 to near 0 it is moving up
+		if((angleNow < 45) && (anglePrev > 315)) {
+			tempPos += fabs(angleNow - anglePrev + 360.0)/360.0*8.0;
+		//if angle went from near 0 to near 360 it is moving down
+		} else if((angleNow > 315) && (anglePrev < 45)) {
+			tempPos -= fabs(angleNow - anglePrev - 360.0)/360.0*8.0;
+		} else { //normal math works
+			tempPos += (angleNow - anglePrev)/360.0*8.0;
+		}
 		anglePrev = angleNow;
+
+		if(invertPos) {
+			position = -tempPos;
+		} else {
+			position = tempPos;
+		}
 	}
 
 	// update error
 	error = target - position;
+	if(error > 0.25) {
+		bPosError = true;
+	} else {
+		bPosError = false;
+	}
+	if(forceError > 0.25) {
+		bForceError = true;
+	} else {
+		bForceError = false;
+	}
+
 	// update direction
 	if (targetForce == 0) {
+		bPosMode = true;
 		if (error > 0) {
 			gpio_set_level(pinDir, 0);
 		} else {
 			gpio_set_level(pinDir, 1);
 		}
 	} else {
+		bPosMode = false;
 		if (forceError > 0) {
 			gpio_set_level(pinDir, 0);
 		} else {

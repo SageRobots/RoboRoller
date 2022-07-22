@@ -48,8 +48,12 @@
 	</div>
 
 	<p id="p1"></p>
+	<p id="pinHomX">Home X</p>
+	<p id="pinHomZ">Home Z</p>
+	<p id="motorXPos">Motor X Pos: </p>
 	<p id="p-battery"></p>
 	<p id="p-pos"></p>
+	<p id="p-status"></p>
 </body>
 </html>
 
@@ -64,7 +68,7 @@
 	var btnStop = document.getElementById('btn-stop');
 	var xhttp = new XMLHttpRequest();
   var xhttpBattery = new XMLHttpRequest();
-  var xhttpPos = new XMLHttpRequest();
+  var xhttpStatus = new XMLHttpRequest();
   var xhttpMoveAbs = new XMLHttpRequest();
   var xhttpSpeeds = new XMLHttpRequest();
   var xhttpForce = new XMLHttpRequest();
@@ -158,15 +162,31 @@
 	setInterval(getBattery, 10000);
 
 	//request position periodically
-	function getPos() {
-	  xhttpPos.onreadystatechange = function() {
+	function getStatus() {
+	  xhttpStatus.onreadystatechange = function() {
 	    if (this.readyState == 4 && this.status == 200) {
-	      document.getElementById("p-pos").innerHTML =
-	      'Position: ' + this.responseText;
+	    	var status = this.responseText;
+	      document.getElementById("p-status").innerHTML = status;
+	      //parse the status
+	      var statusList = status.split(',');
+	      //set pinHomX indicator
+	      if (statusList[1] == "1") {
+		      document.getElementById("pinHomX").style.backgroundColor = "green";
+	      } else {
+		      document.getElementById("pinHomX").style.backgroundColor = "gray";
+	      }
+	      //set pinHomZ indicator
+	      if (statusList[3] == "1") {
+		      document.getElementById("pinHomZ").style.backgroundColor = "green";
+	      } else {
+		      document.getElementById("pinHomZ").style.backgroundColor = "gray";
+	      }
+	      //set motor X position
+	      document.getElementsById("motorXPos").innerHTML = "Motor X Pos: " & statusList[5];
 	    }
 	  };
-	  xhttpPos.open("GET", "pos", true);
-	  xhttpPos.send();
+	  xhttpStatus.open("GET", "status", true);
+	  xhttpStatus.send();
 	};
-	setInterval(getPos, 2000);
+	setInterval(getStatus, 500);
 </script>

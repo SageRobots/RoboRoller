@@ -144,9 +144,9 @@ $EndComp
 Wire Wire Line
 	7150 4500 7550 4500
 Connection ~ 7550 4500
-Text GLabel 7800 2650 0    50   Input ~ 0
+Text GLabel 10550 2600 2    50   Input ~ 0
 STEPX
-Text GLabel 7800 2550 0    50   Input ~ 0
+Text GLabel 10550 2700 2    50   Input ~ 0
 DIRX
 Text GLabel 7800 3250 0    50   Input ~ 0
 DIRZ
@@ -540,7 +540,7 @@ F 3 "https://www.pololu.com/product/2982" H 2750 6300 50  0001 C CNN
 	1    2650 6600
 	1    0    0    -1  
 $EndComp
-Text GLabel 7800 3850 0    50   Input ~ 0
+Text GLabel 7800 2550 0    50   Input ~ 0
 ESTOP
 Text GLabel 2300 3150 0    50   Input ~ 0
 IO0
@@ -870,10 +870,10 @@ Wire Wire Line
 	7150 1800 7600 1800
 Text GLabel 10550 2900 2    50   Input ~ 0
 MSZ
-Text GLabel 7800 2750 0    50   Input ~ 0
+Text GLabel 7800 3850 0    50   Input ~ 0
 MSX
 $Comp
-L Espressif:ESP32-WROOM-E U2
+L MuscleRoller-rescue:ESP32-WROOM-E-Espressif U2
 U 1 1 61EA4056
 P 9150 2800
 F 0 "U2" H 9175 4615 50  0000 C CNN

@@ -191,11 +191,11 @@ X ~EN 9 -400 0 100 R 50 50 1 1 I
 ENDDRAW
 ENDDEF
 #
-# Espressif_ESP32-WROOM-E
+# MuscleRoller-rescue_ESP32-WROOM-E-Espressif
 #
-DEF Espressif_ESP32-WROOM-E U 0 40 Y Y 1 F N
+DEF MuscleRoller-rescue_ESP32-WROOM-E-Espressif U 0 40 Y Y 1 F N
 F0 "U" 0 1700 50 H V C CNN
-F1 "Espressif_ESP32-WROOM-E" 0 -1650 50 H V C CNN
+F1 "MuscleRoller-rescue_ESP32-WROOM-E-Espressif" 0 -1650 50 H V C CNN
 F2 "Espressif:ESP32-WROOM-32E" 0 -1750 50 H I C CNN
 F3 "" 400 0 50 H I C CNN
 DRAW

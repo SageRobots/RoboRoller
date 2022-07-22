@@ -3,6 +3,7 @@
 #include "freertos/event_groups.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
 #include "esp_http_server.h"
 #include "driver/gpio.h"
 #include "esp_sleep.h"
@@ -14,6 +15,8 @@
 #include "driver/spi_master.h"
 #include <hx711.h>
 #include "stepper.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 #define WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -35,9 +38,9 @@ const gpio_num_t pinDirZ = (gpio_num_t)33;
 const gpio_num_t pinStepZ = (gpio_num_t)25;
 const gpio_num_t pinMSZ = (gpio_num_t)26;
 const gpio_num_t pinEn = (gpio_num_t)32;
-const gpio_num_t pinDirX = (gpio_num_t)39;
-const gpio_num_t pinStepX = (gpio_num_t)34;
-const gpio_num_t pinMSX = (gpio_num_t)35;
+const gpio_num_t pinDirX = (gpio_num_t)23;
+const gpio_num_t pinStepX = (gpio_num_t)22;
+const gpio_num_t pinMSX = (gpio_num_t)15;
 const gpio_num_t pinLCClk = (gpio_num_t)27;
 const gpio_num_t pinLCDat = (gpio_num_t)14;
 const gpio_num_t pinLCClk2 = (gpio_num_t)12;
@@ -50,12 +53,12 @@ const gpio_num_t pinMISO = (gpio_num_t)16;
 const gpio_num_t pinCS0 = (gpio_num_t)17;
 const gpio_num_t pinCS1 = (gpio_num_t)18;
 
-const int pinCharge = ADC1_CHANNEL_0;
-const int pinEStop = ADC2_CHANNEL_3;
+const adc1_channel_t pinCharge = ADC1_CHANNEL_0;
+const adc1_channel_t pinEStop = ADC1_CHANNEL_3;
 
 //init motors
-Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX);
-Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ);
+Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX, true);
+Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ, false);
 
 float battery;
 
@@ -176,20 +179,33 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
     strncpy(uri8, req->uri, 8);
     uri8[8] = 0;
 
-    if (!strcmp(req->uri,"/battery")) {
-        //return the battery voltage
-        int len = snprintf(NULL, 0, "%.2f", battery);
-        char *result = (char *)malloc(len + 1);
-        snprintf(result, len + 1, "%.2f", battery);
+    if (!strcmp(req->uri, "/status")) {
+        //return machine status
+        int len = snprintf(NULL, 0, "pinHomX,%i,pinHomZ,%i,motorXPos,%.2f", 
+            gpio_get_level(motorX.pinHome), 
+            gpio_get_level(motorZ.pinHome),
+            motorX.position);
+        char *result = (char*)malloc(len + 1);
+        snprintf(result, len + 1, "pinHomX,%i,pinHomZ,%i,motorXPos,%.2f", 
+            gpio_get_level(motorX.pinHome), 
+            gpio_get_level(motorZ.pinHome),
+            motorX.position);
         httpd_resp_sendstr(req, result);
 
-    } else if (!strcmp(req->uri,"/pos")) {
-        int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
-            motorX.position, motorZ.position, currentForce);
-        char *result = (char *)malloc(len + 1);
-        snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
-            motorX.position, motorZ.position, currentForce);
-        httpd_resp_sendstr(req, result);
+    // if (!strcmp(req->uri,"/battery")) {
+    //     //return the battery voltage
+    //     int len = snprintf(NULL, 0, "%.2f", battery);
+    //     char *result = (char *)malloc(len + 1);
+    //     snprintf(result, len + 1, "%.2f", battery);
+    //     httpd_resp_sendstr(req, result);
+
+    // } else if (!strcmp(req->uri,"/pos")) {
+    //     int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
+    //         motorX.position, motorZ.position, currentForce);
+    //     char *result = (char *)malloc(len + 1);
+    //     snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
+    //         motorX.position, motorZ.position, currentForce);
+    //     httpd_resp_sendstr(req, result);
 
     } else if (!strcmp(req->uri,"/stop")) {
         motorX.target = motorX.position;
@@ -262,8 +278,7 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-void IRAM_ATTR timer_0_isr(void *para) {
-    timer_spinlock_take(TIMER_GROUP_0);
+static bool IRAM_ATTR timer_0_isr(void *para) {
     bool stepX = false;
     bool stepZ = false;
     motorX.intrCount++;
@@ -273,7 +288,7 @@ void IRAM_ATTR timer_0_isr(void *para) {
     if(motorX.intrCount >= motorX.intrInterval) {
         motorX.intrCount = 0;
 
-        if(fabs(motorX.error) > 0.25) {
+        if(motorX.bPosError) {
             stepX = true;
         } else {
             motorX.complete = true;
@@ -284,14 +299,14 @@ void IRAM_ATTR timer_0_isr(void *para) {
     if(motorZ.intrCount >= motorZ.intrInterval) {
         motorZ.intrCount = 0;
 
-        if(targetForce == 0) { //position mode
-            if(fabs(motorZ.error) > 0.25) {
+        if(motorZ.bPosMode) { //position mode
+            if(motorZ.bPosError) {
                 stepZ = true;
             } else {
                 motorZ.complete = true;
             }
         } else { //force mode
-            if(fabs(motorZ.forceError) > 0.25) {
+            if(motorZ.bForceError) {
                 stepZ = true;
             }
         }
@@ -309,15 +324,15 @@ void IRAM_ATTR timer_0_isr(void *para) {
 
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
     timer_group_enable_alarm_in_isr(TIMER_GROUP_0, TIMER_0);
-    timer_spinlock_give(TIMER_GROUP_0);
+
+    return pdFALSE;
 }
 
-void IRAM_ATTR timer_1_isr(void *para) {
-    timer_spinlock_take(TIMER_GROUP_0);
+static bool IRAM_ATTR timer_1_isr(void *para) {
     timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_1);
     gpio_set_level(motorX.pinStep, 0);
     gpio_set_level(motorZ.pinStep, 0);
-    timer_spinlock_give(TIMER_GROUP_0);
+    return pdFALSE;
 }
 
 static void tg0_timer_init(timer_idx_t timer_idx,
@@ -352,34 +367,34 @@ static void enc_task(void *arg) {
     spi_device_handle_t spi;
     spi_bus_config_t buscfg={};
     buscfg.mosi_io_num=pinMOSI;
-    buscfg.data0_io_num=-1;
+    // buscfg.data0_io_num=-1;
     buscfg.miso_io_num=pinMISO;
-    buscfg.data1_io_num=-1;
+    // buscfg.data1_io_num=-1;
     buscfg.sclk_io_num=pinClk;
     buscfg.quadwp_io_num=-1;
-    buscfg.data2_io_num=-1;
+    // buscfg.data2_io_num=-1;
     buscfg.quadhd_io_num=-1;
-    buscfg.data3_io_num=-1;
-    buscfg.data4_io_num=-1;
-    buscfg.data5_io_num=-1;
-    buscfg.data6_io_num=-1;
-    buscfg.data7_io_num=-1;
-    buscfg.max_transfer_sz=0;
-    buscfg.flags=0;
-    buscfg.intr_flags=0;
+    // buscfg.data3_io_num=-1;
+    // buscfg.data4_io_num=-1;
+    // buscfg.data5_io_num=-1;
+    // buscfg.data6_io_num=-1;
+    // buscfg.data7_io_num=-1;
+    // buscfg.max_transfer_sz=0;
+    // buscfg.flags=0;
+    // buscfg.intr_flags=0;
 
     spi_device_interface_config_t devcfg={};
     devcfg.command_bits = 0;
     devcfg.address_bits = 0;
-    devcfg.dummy_bits = 0;
+    // devcfg.dummy_bits = 0;
     devcfg.mode=1;
-    devcfg.duty_cycle_pos = 128;
-    devcfg.cs_ena_pretrans = 0;
-    devcfg.cs_ena_posttrans = 0;
+    // devcfg.duty_cycle_pos = 128;
+    // devcfg.cs_ena_pretrans = 0;
+    // devcfg.cs_ena_posttrans = 0;
     devcfg.clock_speed_hz=5000000;
-    devcfg.input_delay_ns = 0;
+    // devcfg.input_delay_ns = 0;
     devcfg.spics_io_num=-1;   //CS pins manually implemented
-    devcfg.flags = 0;
+    // devcfg.flags = 0;
     devcfg.queue_size = 7;
 
     ret=spi_bus_initialize(SPI2_HOST, &buscfg, 0);
@@ -546,6 +561,15 @@ void zSpeed() {
 }
 
 extern "C" void app_main(void) {
+    // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable   detector
+
+    //Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
     //connect to WiFi
     wifiInit();
     static httpd_handle_t server = NULL;
@@ -564,6 +588,7 @@ extern "C" void app_main(void) {
     //bit mask of the pins that you want to set
     io_conf.pin_bit_mask = 1ULL<<pinDirX|1ULL<<pinStepX|1ULL<<pinMSX|1ULL<<pinEn;
     io_conf.pin_bit_mask |= 1ULL<<pinDirZ|1ULL<<pinStepZ|1ULL<<pinMSZ;
+    io_conf.pin_bit_mask |= 1ULL<<pinCS0|1ULL<<pinCS1;
     //disable pull-down mode
     io_conf.pull_down_en = (gpio_pulldown_t)0;
     //disable pull-up mode
@@ -580,22 +605,25 @@ extern "C" void app_main(void) {
     gpio_config(&io_conf);
 
     //configure ADCs
-    adc1_config_channel_atten((adc1_channel_t)pinCharge, atten);
+    adc1_config_channel_atten(pinCharge, atten);
     adcCharsCharge = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adcCharsCharge);
-    adc2_config_channel_atten((adc2_channel_t)pinEStop, atten);
+    adc1_config_channel_atten(pinEStop, atten);
     adcCharsEStop = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_characterize(ADC_UNIT_2, atten, width, DEFAULT_VREF, adcCharsEStop);
+    esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adcCharsEStop);
 
     tg0_timer_init(TIMER_0, TIMER_AUTORELOAD_EN, TIMER_INTERVAL0_S);
-    timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
-       (void *) TIMER_0, ESP_INTR_FLAG_IRAM, NULL);
+    // timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
+    //    (void *) TIMER_0, ESP_INTR_FLAG_IRAM, NULL);
+    int *arg = 0;
+    timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, timer_0_isr, arg, 0);
     timer_start(TIMER_GROUP_0, TIMER_0);
 
     tg0_timer_init(TIMER_1, TIMER_AUTORELOAD_DIS, TIMER_INTERVAL1_S);
-    timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
-       (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
-    timer_start(TIMER_GROUP_0, TIMER_1);
+    // timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
+    //    (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
+    timer_isr_callback_add(TIMER_GROUP_0, TIMER_1, timer_1_isr, arg, 0);
+    // timer_start(TIMER_GROUP_0, TIMER_1);
 
     //create load cell tasks
     xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
@@ -611,7 +639,7 @@ extern "C" void app_main(void) {
         if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
             uint32_t adc_reading = 0;
-            int raw = adc1_get_raw((adc1_channel_t)pinCharge);
+            int raw = adc1_get_raw(pinCharge);
             //Convert adc_reading to voltage in mV
             uint32_t voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsCharge);
             battery = (float)voltage*57.0/10000.0;
@@ -620,12 +648,14 @@ extern "C" void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
+            // adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
+            raw = adc1_get_raw(pinEStop);
             //Convert adc_reading to voltage in mV
             voltage = esp_adc_cal_raw_to_voltage(adc_reading, adcCharsEStop);
             float eStop = (float)voltage*57.0/10000.0;
             printf("eStop voltage: %.3f\n", eStop);
-            // printf("X %.1f\t Z %.1f\n", motorX.currentPos, motorZ.currentPos);
+            // printf("pinHomX: %i\n", gpio_get_level(motorX.pinHome));
+            printf("X %.1f\t Z %.1f\n", motorX.position, motorZ.position);
             printf("currectForce %.1f\t FL %.1f\t FR %.1f\n", currentForce, forceL, forceR);
             timePrint = timeNow;
         }
