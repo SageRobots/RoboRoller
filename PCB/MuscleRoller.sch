@@ -540,7 +540,7 @@ F 3 "https://www.pololu.com/product/2982" H 2750 6300 50  0001 C CNN
 	1    2650 6600
 	1    0    0    -1  
 $EndComp
-Text GLabel 7800 2550 0    50   Input ~ 0
+Text GLabel 10550 1800 2    50   Input ~ 0
 ESTOP
 Text GLabel 2300 3150 0    50   Input ~ 0
 IO0
