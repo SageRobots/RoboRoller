@@ -54,7 +54,7 @@ const gpio_num_t pinCS0 = (gpio_num_t)17;
 const gpio_num_t pinCS1 = (gpio_num_t)18;
 
 const adc1_channel_t pinCharge = ADC1_CHANNEL_0;
-const adc1_channel_t pinEStop = ADC1_CHANNEL_3;
+const adc1_channel_t pinEStop = ADC2_CHANNEL_2;
 
 //init motors
 Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX, true);
