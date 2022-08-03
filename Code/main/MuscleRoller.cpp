@@ -54,7 +54,7 @@ const gpio_num_t pinCS0 = (gpio_num_t)17;
 const gpio_num_t pinCS1 = (gpio_num_t)18;
 
 const adc1_channel_t pinCharge = ADC1_CHANNEL_0;
-const adc1_channel_t pinEStop = ADC2_CHANNEL_2;
+const adc2_channel_t pinEStop = ADC2_CHANNEL_2;
 
 //init motors
 Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX, true);
@@ -608,9 +608,9 @@ extern "C" void app_main(void) {
     adc1_config_channel_atten(pinCharge, atten);
     adcCharsCharge = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
     esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adcCharsCharge);
-    adc1_config_channel_atten(pinEStop, atten);
+    adc2_config_channel_atten(pinEStop, atten);
     adcCharsEStop = (esp_adc_cal_characteristics_t*)calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_characterize(ADC_UNIT_1, atten, width, DEFAULT_VREF, adcCharsEStop);
+    esp_adc_cal_characterize(ADC_UNIT_2, atten, width, DEFAULT_VREF, adcCharsEStop);
 
     tg0_timer_init(TIMER_0, TIMER_AUTORELOAD_EN, TIMER_INTERVAL0_S);
     // timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
@@ -638,7 +638,6 @@ extern "C" void app_main(void) {
         if(targetForce != 0) zSpeed();
         if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
-            uint32_t adc_reading = 0;
             int raw = adc1_get_raw(pinCharge);
             //Convert adc_reading to voltage in mV
             uint32_t voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsCharge);
@@ -648,10 +647,10 @@ extern "C" void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            // adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
-            raw = adc1_get_raw(pinEStop);
+            adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
+            // raw = adc1_get_raw(pinEStop);
             //Convert adc_reading to voltage in mV
-            voltage = esp_adc_cal_raw_to_voltage(adc_reading, adcCharsEStop);
+            voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsEStop);
             float eStop = (float)voltage*57.0/10000.0;
             printf("eStop voltage: %.3f\n", eStop);
             // printf("pinHomX: %i\n", gpio_get_level(motorX.pinHome));
