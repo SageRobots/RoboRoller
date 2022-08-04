@@ -26,8 +26,8 @@
 	</div>
 
 	<div>
-		<button type="button" id="btn-zero-x">Zero X</button>
-		<button type="button" id="btn-zero-z">Zero Z</button>
+		<button type="button" id="btn-home-x">Home X</button>
+		<button type="button" id="btn-home-z">Home Z</button>
 	</div>
 
 	<div>
@@ -50,7 +50,7 @@
 	<p id="p1"></p>
 	<p id="pinHomX">Home X</p>
 	<p id="pinHomZ">Home Z</p>
-	<p id="motorXPos">Motor X Pos: </p>
+	<p id="motorXPos">X Pos: </p>
 	<p id="p-battery"></p>
 	<p id="p-pos"></p>
 	<p id="p-status"></p>
@@ -62,8 +62,8 @@
 	var btnMoveAbs = document.getElementById('btn-move-abs');
 	var btnSpeed = document.getElementById('btn-speed');
 	var btnForce = document.getElementById('btn-force');
-	var btnZeroX = document.getElementById('btn-zero-x');
-	var btnZeroZ = document.getElementById('btn-zero-z');
+	var btnHomeX = document.getElementById('btn-home-x');
+	var btnHomeZ = document.getElementById('btn-home-z');
 	var btnCycle = document.getElementById('btn-cycle');
 	var btnStop = document.getElementById('btn-stop');
 	var xhttp = new XMLHttpRequest();
@@ -72,7 +72,7 @@
   var xhttpMoveAbs = new XMLHttpRequest();
   var xhttpSpeeds = new XMLHttpRequest();
   var xhttpForce = new XMLHttpRequest();
-  var xhttpZero = new XMLHttpRequest();
+  var xhttpHome = new XMLHttpRequest();
   var xhttpCycle = new XMLHttpRequest();
   var xhttpStop = new XMLHttpRequest();
 
@@ -103,24 +103,24 @@
 		xhttpForce.send();
 	};
 
-	function setZero(axis) {
-		var getQuery = 'zero?'
+	function setHome(axis) {
+		var getQuery = 'home?'
 		if(axis == 'x') {
 			getQuery += 'axis=x'
 		} else if (axis == 'z') {
 			getQuery += 'axis=z'
 		}
 		console.log("getQuery: " + getQuery);
-		xhttpZero.open('GET', getQuery, true)
-		xhttpZero.send()
+		xhttpHome.open('GET', getQuery, true)
+		xhttpHome.send()
 	}
 
-	btnZeroX.onclick = function() {
-		setZero('x')
+	btnHomeX.onclick = function() {
+		setHome('x')
 	}
 
-	btnZeroZ.onclick = function() {
-		setZero('z')
+	btnHomeZ.onclick = function() {
+		setHome('z')
 	}
 
 	btnStop.onclick = function() {
@@ -182,11 +182,11 @@
 		      document.getElementById("pinHomZ").style.backgroundColor = "gray";
 	      }
 	      //set motor X position
-	      document.getElementsById("motorXPos").innerHTML = "Motor X Pos: " & statusList[5];
+	      document.getElementById("motorXPos").innerHTML = "Motor X Pos: " + statusList[5];
 	    }
 	  };
 	  xhttpStatus.open("GET", "status", true);
 	  xhttpStatus.send();
 	};
-	setInterval(getStatus, 500);
+	setInterval(getStatus, 1000);
 </script>

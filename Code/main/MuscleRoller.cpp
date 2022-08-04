@@ -24,7 +24,6 @@
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
 #define TIMER_DIVIDER         16  //  Hardware timer clock divider
 #define TIMER_SCALE           (TIMER_BASE_CLK / TIMER_DIVIDER)  // convert counter value to s
-#define TIMER_INTERVAL0_S    0.0002 // sample test interval for the first timer
 #define TIMER_INTERVAL1_S 0.00005
 static EventGroupHandle_t wifiEventGroup;
 #define WIFI_CONNECTED_BIT BIT0
@@ -229,11 +228,28 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
                 /* Get value of expected key from query string */
                 if (httpd_query_key_value(buf, "x", param, sizeof(param)) == ESP_OK) {
                     ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
-                    motorX.speed = atof(param);
+                    float tempSpeed = atof(param);
+                    if(tempSpeed < 40) motorX.speed = tempSpeed;
+                    else motorX.speed = 40;
                 }
                 if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
                     ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
                     motorZ.speed = atof(param);
+                }
+            }
+            free(buf);
+        }
+
+    } else if (uri.substr(0,5) == "/home") {
+        if (buf_len > 1) {
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                char param[32];
+                /* Get value of expected key from query string */
+                if (httpd_query_key_value(buf, "axis", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => axis=%s", param);
+                    if(*param == 'x') motorX.home();
+                    else if(*param == 'z') motorZ.home();
                 }
             }
             free(buf);

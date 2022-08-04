@@ -5,6 +5,8 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
+#define TIMER_INTERVAL0_S    0.0002
+
 class Stepper {
 	public:
 		gpio_num_t pinStep, pinDir, pinHome, pinCS, pinMS;

@@ -18,10 +18,11 @@ Stepper::Stepper(gpio_num_t step, gpio_num_t dir, gpio_num_t home, gpio_num_t CS
 	anglePrev = 0;
 	stepsPer_mm = 200.0/8.0;
 	invertPos = invert;
-	transitionSpeed = 10; //deg/s
+	transitionSpeed = 17; //deg/s
 }
 
 void Stepper::home() {
+	speed = 10;
 	homing = true;
 	homed = false;
 	target = 0;
@@ -29,7 +30,7 @@ void Stepper::home() {
 }
 
 void Stepper::update(spi_device_handle_t spi) {
-	if(gpio_get_level(pinHome) && !homed) {
+	if(!gpio_get_level(pinHome) && !homed) {
 		homed = true;
 		position = 0;
 	}
@@ -84,12 +85,12 @@ void Stepper::update(spi_device_handle_t spi) {
 
 	// update error
 	error = target - position;
-	if(error > 0.25) {
+	if(fabs(error) > 0.25) {
 		bPosError = true;
 	} else {
 		bPosError = false;
 	}
-	if(forceError > 0.25) {
+	if(fabs(forceError) > 0.25) {
 		bForceError = true;
 	} else {
 		bForceError = false;
@@ -115,7 +116,7 @@ void Stepper::update(spi_device_handle_t spi) {
 	//update speed
 	if(speed > transitionSpeed) microstep(false);
 	else microstep(true);
-    intrInterval = 1.0/(speed*stepsPer_mm*TIMER_INTERVAL0_S);
+  intrInterval = 1.0/(speed*stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
 void Stepper::microstep(bool on) {
