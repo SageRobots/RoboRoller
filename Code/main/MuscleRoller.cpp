@@ -179,6 +179,12 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
     strncpy(uri8, req->uri, 8);
     uri8[8] = 0;
 
+    char*  buf;
+    size_t buf_len;
+    /* Read URL query string length and allocate memory for length + 1,
+    * extra byte for null termination */
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+
     if (!strcmp(req->uri, "/status")) {
         //return machine status
         int len = snprintf(NULL, 0, "pinHomX,%i,pinHomZ,%i,motorXPos,%.2f", 
@@ -192,21 +198,6 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
             motorX.position);
         httpd_resp_sendstr(req, result);
 
-    // if (!strcmp(req->uri,"/battery")) {
-    //     //return the battery voltage
-    //     int len = snprintf(NULL, 0, "%.2f", battery);
-    //     char *result = (char *)malloc(len + 1);
-    //     snprintf(result, len + 1, "%.2f", battery);
-    //     httpd_resp_sendstr(req, result);
-
-    // } else if (!strcmp(req->uri,"/pos")) {
-    //     int len = snprintf(NULL, 0, "X: %.2f\t Z: %.2f\t F: %.1f", 
-    //         motorX.position, motorZ.position, currentForce);
-    //     char *result = (char *)malloc(len + 1);
-    //     snprintf(result, len + 1, "X: %.2f\t Z: %.2f\t F: %.1f", 
-    //         motorX.position, motorZ.position, currentForce);
-    //     httpd_resp_sendstr(req, result);
-
     } else if (!strcmp(req->uri,"/stop")) {
         motorX.target = motorX.position;
         motorZ.target = motorZ.position;
@@ -214,7 +205,23 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
 
     } else if (!strcmp(uri8, "/moveAbs")) {
         printf("moveAbs\n");
-    
+        if (buf_len > 1) {
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                char param[32];
+                /* Get value of expected key from query string */
+                if (httpd_query_key_value(buf, "x", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
+                    motorX.target = atof(param);
+                }
+                if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
+                    motorZ.target = atof(param);
+                    motorZ.targetForce = 0;
+                }
+            }
+            free(buf);
+        }
     } else {
         printf("URI: ");
         printf(req->uri);
@@ -623,11 +630,11 @@ extern "C" void app_main(void) {
     // timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
     //    (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_isr_callback_add(TIMER_GROUP_0, TIMER_1, timer_1_isr, arg, 0);
-    // timer_start(TIMER_GROUP_0, TIMER_1);
+    timer_start(TIMER_GROUP_0, TIMER_1);
 
     //create load cell tasks
-    xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
-    xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+    // xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+    // xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
     //create encoder task
     xTaskCreate(enc_task, "enc_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
 
@@ -647,7 +654,8 @@ extern "C" void app_main(void) {
                 printf("Low battery: %.2f V\n", battery);
                 esp_deep_sleep_start();
             }
-            adc2_get_raw((adc2_channel_t)pinEStop, width, &raw);
+            adc2_get_raw(pinEStop, width, &raw);
+            printf("estop raw: %i\n", raw);
             // raw = adc1_get_raw(pinEStop);
             //Convert adc_reading to voltage in mV
             voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsEStop);
