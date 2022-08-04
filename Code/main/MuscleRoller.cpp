@@ -17,6 +17,7 @@
 #include "stepper.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
+#include <string>
 
 #define WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
@@ -175,17 +176,15 @@ static esp_err_t get_handler(httpd_req_t *req) {
 }
 
 static esp_err_t get_handler_2(httpd_req_t *req) {
-    char uri8[9];
-    strncpy(uri8, req->uri, 8);
-    uri8[8] = 0;
-
     char*  buf;
     size_t buf_len;
     /* Read URL query string length and allocate memory for length + 1,
     * extra byte for null termination */
     buf_len = httpd_req_get_url_query_len(req) + 1;
 
-    if (!strcmp(req->uri, "/status")) {
+    std::string uri = req->uri;
+
+    if (uri == "/status") {
         //return machine status
         int len = snprintf(NULL, 0, "pinHomX,%i,pinHomZ,%i,motorXPos,%.2f", 
             gpio_get_level(motorX.pinHome), 
@@ -198,13 +197,12 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
             motorX.position);
         httpd_resp_sendstr(req, result);
 
-    } else if (!strcmp(req->uri,"/stop")) {
+    } else if (uri == "/stop") {
         motorX.target = motorX.position;
         motorZ.target = motorZ.position;
         cycle.cycling = false;
 
-    } else if (!strcmp(uri8, "/moveAbs")) {
-        printf("moveAbs\n");
+    } else if (uri.substr(0,8) == "/moveAbs") {
         if (buf_len > 1) {
             buf = (char*)malloc(buf_len);
             if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
@@ -222,6 +220,25 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
             }
             free(buf);
         }
+
+    } else if (uri.substr(0,7) == "/speeds") {
+        if (buf_len > 1) {
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                char param[32];
+                /* Get value of expected key from query string */
+                if (httpd_query_key_value(buf, "x", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => x=%s", param);
+                    motorX.speed = atof(param);
+                }
+                if (httpd_query_key_value(buf, "z", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => z=%s", param);
+                    motorZ.speed = atof(param);
+                }
+            }
+            free(buf);
+        }
+        
     } else {
         printf("URI: ");
         printf(req->uri);

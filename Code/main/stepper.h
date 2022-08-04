@@ -10,12 +10,13 @@ class Stepper {
 		gpio_num_t pinStep, pinDir, pinHome, pinCS, pinMS;
 		int intrCount;
 		int intrInterval;
-		double position, target, targetForce;
-		double error, forceError;
+		float position, target, targetForce;
+		float error, forceError;
 		bool complete, homing, homed, bPosError, bForceError, bPosMode;
-		double anglePrev;
+		float anglePrev;
 		int stepsPer_mm;
 		bool invertPos;
+		float speed, transitionSpeed;
 
 		Stepper(gpio_num_t pinStep, gpio_num_t pinDir, gpio_num_t pinHome, gpio_num_t pinCS, gpio_num_t pinMS, bool invert);
 

@@ -18,6 +18,7 @@ Stepper::Stepper(gpio_num_t step, gpio_num_t dir, gpio_num_t home, gpio_num_t CS
 	anglePrev = 0;
 	stepsPer_mm = 200.0/8.0;
 	invertPos = invert;
+	transitionSpeed = 10; //deg/s
 }
 
 void Stepper::home() {
@@ -110,6 +111,11 @@ void Stepper::update(spi_device_handle_t spi) {
 			gpio_set_level(pinDir, 1);
 		}
 	}
+
+	//update speed
+	if(speed > transitionSpeed) microstep(false);
+	else microstep(true);
+    intrInterval = 1.0/(speed*stepsPer_mm*TIMER_INTERVAL0_S);
 }
 
 void Stepper::microstep(bool on) {
