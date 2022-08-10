@@ -115,6 +115,9 @@ void Stepper::update(spi_device_handle_t spi) {
 		}
 	}
 
+	if(bPosMode && fabs(error) <= 0.25) complete = true;
+	// if(!bPosMode && fabs(forceError) <= 0.5) complete = true;
+
 	//update speed
 	if(speed > transitionSpeed) microstep(false);
 	else microstep(true);

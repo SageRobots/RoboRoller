@@ -196,6 +196,7 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
     } else if (uri == "/stop") {
         motorX.target = motorX.position;
         motorZ.target = motorZ.position;
+        motorZ.targetForce = 0;
         cycle.cycling = false;
 
     } else if (uri.substr(0,8) == "/moveAbs") {
@@ -246,7 +247,10 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
                 if (httpd_query_key_value(buf, "axis", param, sizeof(param)) == ESP_OK) {
                     ESP_LOGI(TAG, "Found URL query parameter => axis=%s", param);
                     if(*param == 'x') motorX.home();
-                    else if(*param == 'z') motorZ.home();
+                    else if(*param == 'z') {
+                        motorZ.home();
+                        motorZ.force = 0;
+                    }
                 }
             }
             free(buf);
@@ -266,6 +270,40 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
             free(buf);
         }
         
+    } else if (uri.substr(0,6) == "/cycle") {
+        if (buf_len > 1) {
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                char param[32];
+                if (httpd_query_key_value(buf, "startX", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => startX=%s", param);
+                    cycle.startX = atof(param);
+                }
+                if (httpd_query_key_value(buf, "startZ", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => startZ=%s", param);
+                    cycle.startZ = atof(param);
+                }
+                if (httpd_query_key_value(buf, "force", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => force=%s", param);
+                    cycle.force = atof(param);
+                }
+                if (httpd_query_key_value(buf, "endX", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => endX=%s", param);
+                    cycle.endX = atof(param);
+                }
+                if (httpd_query_key_value(buf, "travelSpeed", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => travelSpeed=%s", param);
+                    cycle.travelSpeed = atof(param);
+                }
+                if (httpd_query_key_value(buf, "speed", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => speed=%s", param);
+                    cycle.speed = atof(param);
+                }
+                cycle.cycling = true;
+            }
+            free(buf);
+        }
+
     } else {
         printf("URI: ");
         printf(req->uri);
@@ -341,8 +379,6 @@ static bool IRAM_ATTR timer_0_isr(void *para) {
 
         if(motorX.bPosError) {
             stepX = true;
-        } else {
-            motorX.complete = true;
         }
     }
 
@@ -353,8 +389,6 @@ static bool IRAM_ATTR timer_0_isr(void *para) {
         if(motorZ.bPosMode) { //position mode
             if(motorZ.bPosError) {
                 stepZ = true;
-            } else {
-                motorZ.complete = true;
             }
         } else { //force mode
             if(motorZ.bForceError) {
@@ -551,13 +585,12 @@ void runCycle() {
         case 0: //move to start x and start z
         motorX.target = cycle.startX;
         motorX.complete = false;
-        motorX.intrInterval = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorX.speed = cycle.travelSpeed;
 
         motorZ.targetForce = 0;
         motorZ.target = cycle.startZ;
         motorZ.complete = false;
-        motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
-
+        motorZ.speed = cycle.travelSpeed;
         cycle.step = 10;
         break;
 
@@ -568,11 +601,15 @@ void runCycle() {
         case 20: //apply force
         motorZ.targetForce = cycle.force;
         motorZ.bForceError = true;
+        cycle.step = 25;
+        break;
+
+        case 25:
         if(!motorZ.bForceError) cycle.step = 30;
         break;
 
         case 30: // move to end x
-        motorX.intrInterval = 1.0/(cycle.speed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorX.speed = cycle.speed;
         motorX.target = cycle.endX;
         motorX.complete = false;
         cycle.step = 40;
@@ -583,7 +620,7 @@ void runCycle() {
         break;
 
         case 50: // set force to 0 and move to start z
-        motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
+        motorZ.speed = cycle.travelSpeed;
         motorZ.targetForce = 0;
         motorZ.target = cycle.startZ;
         motorZ.complete = false;
@@ -602,7 +639,7 @@ void zSpeed() {
     float speed = kp*error;
     if(speed > 20) speed = 20;
     if(speed < 0.5) speed = 0.5;
-    motorZ.intrInterval = 1.0/(speed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
+    motorZ.speed = speed;
 }
 
 extern "C" void app_main(void) {
@@ -684,7 +721,7 @@ extern "C" void app_main(void) {
             voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsEStop);
             float eStop = (float)voltage*57.0/10000.0;
             // printf("pinHomX: %i\n", gpio_get_level(motorX.pinHome));
-            printf("X %.1f\t Z %.1f\n", motorX.position, motorZ.position);
+            printf("X %.1f\t Z %.1f\t step %i\n", motorX.position, motorZ.position, cycle.step);
             printf("force %.1f\t FL %.1f\t FR %.1f\n", motorZ.force, forceL, forceR);
             timePrint = timeNow;
         }
