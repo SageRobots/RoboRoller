@@ -12,7 +12,7 @@ class Stepper {
 		gpio_num_t pinStep, pinDir, pinHome, pinCS, pinMS;
 		int intrCount;
 		int intrInterval;
-		float position, target, targetForce;
+		float position, target, force, targetForce;
 		float error, forceError;
 		bool complete, homing, homed, bPosError, bForceError, bPosMode;
 		float anglePrev;

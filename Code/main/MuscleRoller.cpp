@@ -58,7 +58,7 @@ const adc2_channel_t pinEStop = ADC2_CHANNEL_2;
 
 //init motors
 Stepper motorX(pinStepX, pinDirX, pinHomX, pinCS0, pinMSX, true);
-Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ, false);
+Stepper motorZ(pinStepZ, pinDirZ, pinHomZ, pinCS1, pinMSZ, true);
 
 float battery;
 
@@ -83,9 +83,6 @@ const float LC125lb = -392000;
 const float LC2Zero = -92093; //far side
 const float LC225lb = 479727;
 float forceL, forceR;
-float targetForce = 0, currentForce = 0;
-const float forceTolerance = 0.2;
-float kp = 2;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data) {
@@ -250,6 +247,20 @@ static esp_err_t get_handler_2(httpd_req_t *req) {
                     ESP_LOGI(TAG, "Found URL query parameter => axis=%s", param);
                     if(*param == 'x') motorX.home();
                     else if(*param == 'z') motorZ.home();
+                }
+            }
+            free(buf);
+        }
+
+    } else if (uri.substr(0,6) == "/force") {
+        if (buf_len > 1) {
+            buf = (char*)malloc(buf_len);
+            if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+                char param[32];
+                /* Get value of expected key from query string */
+                if (httpd_query_key_value(buf, "f", param, sizeof(param)) == ESP_OK) {
+                    ESP_LOGI(TAG, "Found URL query parameter => f=%s", param);
+                    motorZ.targetForce = atof(param);
                 }
             }
             free(buf);
@@ -485,7 +496,7 @@ void loadCell(void *pvParameters) {
         }
 
         forceL = 25*(data-LC1Zero)/LC125lb;
-        currentForce = forceL+forceR;
+        motorZ.force = forceL+forceR;
         // printf("Raw: %d\n", data);
 
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -528,29 +539,21 @@ void loadCell2(void *pvParameters) {
         }
 
         forceR =  25*(data-LC2Zero)/LC225lb;
-        currentForce = forceL+forceR;
+        motorZ.force = forceL+forceR;
         // printf("Raw: %d\n", data);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-bool forceOk() {
-    if(currentForce > targetForce - forceTolerance) {
-        if(currentForce < targetForce + forceTolerance) return true;
-    }
-    return false;
-}
-
 void runCycle() {
     switch(cycle.step) {
         case 0: //move to start x and start z
-        targetForce = 0;
         motorX.target = cycle.startX;
         motorX.complete = false;
         motorX.intrInterval = 1.0/(cycle.travelSpeed*motorX.stepsPer_mm*TIMER_INTERVAL0_S);
 
-        targetForce = 0;
+        motorZ.targetForce = 0;
         motorZ.target = cycle.startZ;
         motorZ.complete = false;
         motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
@@ -563,8 +566,9 @@ void runCycle() {
         break;
 
         case 20: //apply force
-        targetForce = cycle.force;
-        if(forceOk()) cycle.step = 30;
+        motorZ.targetForce = cycle.force;
+        motorZ.bForceError = true;
+        if(!motorZ.bForceError) cycle.step = 30;
         break;
 
         case 30: // move to end x
@@ -580,7 +584,7 @@ void runCycle() {
 
         case 50: // set force to 0 and move to start z
         motorZ.intrInterval = 1.0/(cycle.travelSpeed*motorZ.stepsPer_mm*TIMER_INTERVAL0_S);
-        targetForce = 0;
+        motorZ.targetForce = 0;
         motorZ.target = cycle.startZ;
         motorZ.complete = false;
         cycle.step = 60;
@@ -593,7 +597,8 @@ void runCycle() {
 }
 
 void zSpeed() {
-    float error = fabs(targetForce - currentForce);
+    float error = fabs(motorZ.targetForce - motorZ.force);
+    float kp = 1.5;
     float speed = kp*error;
     if(speed > 20) speed = 20;
     if(speed < 0.5) speed = 0.5;
@@ -601,8 +606,6 @@ void zSpeed() {
 }
 
 extern "C" void app_main(void) {
-    // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable   detector
-
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -621,19 +624,13 @@ extern "C" void app_main(void) {
 
     //configure outputs
     gpio_config_t io_conf;
-    //disable interrupt
     io_conf.intr_type = GPIO_INTR_DISABLE;
-    //set as output mode
     io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
-    //bit mask of the pins that you want to set
     io_conf.pin_bit_mask = 1ULL<<pinDirX|1ULL<<pinStepX|1ULL<<pinMSX|1ULL<<pinEn;
     io_conf.pin_bit_mask |= 1ULL<<pinDirZ|1ULL<<pinStepZ|1ULL<<pinMSZ;
     io_conf.pin_bit_mask |= 1ULL<<pinCS0|1ULL<<pinCS1|1ULL<<pinLCClk|1ULL<<pinLCClk2;
-    //disable pull-down mode
     io_conf.pull_down_en = (gpio_pulldown_t)0;
-    //disable pull-up mode
     io_conf.pull_up_en = (gpio_pullup_t)0;
-    //configure GPIO with the given settings
     gpio_config(&io_conf);
 
     //configure inputs
@@ -653,29 +650,23 @@ extern "C" void app_main(void) {
     esp_adc_cal_characterize(ADC_UNIT_2, atten, width, DEFAULT_VREF, adcCharsEStop);
 
     tg0_timer_init(TIMER_0, TIMER_AUTORELOAD_EN, TIMER_INTERVAL0_S);
-    // timer_isr_register(TIMER_GROUP_0, TIMER_0, timer_0_isr,
-    //    (void *) TIMER_0, ESP_INTR_FLAG_IRAM, NULL);
     int *arg = 0;
     timer_isr_callback_add(TIMER_GROUP_0, TIMER_0, timer_0_isr, arg, 0);
     timer_start(TIMER_GROUP_0, TIMER_0);
 
     tg0_timer_init(TIMER_1, TIMER_AUTORELOAD_DIS, TIMER_INTERVAL1_S);
-    // timer_isr_register(TIMER_GROUP_0, TIMER_1, timer_1_isr,
-    //    (void *) TIMER_1, ESP_INTR_FLAG_IRAM, NULL);
     timer_isr_callback_add(TIMER_GROUP_0, TIMER_1, timer_1_isr, arg, 0);
     timer_start(TIMER_GROUP_0, TIMER_1);
 
-    //create load cell tasks
-    // xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
-    // xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
-    //create encoder task
+    xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+    xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
     xTaskCreate(enc_task, "enc_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
 
     while(1) {
         vTaskDelay(10/portTICK_RATE_MS);
         timeNow = esp_timer_get_time();
 
-        if(targetForce != 0) zSpeed();
+        if(motorZ.targetForce != 0) zSpeed();
         if(cycle.cycling) runCycle();
         if(timeNow - timePrint > 1000000) {
             int raw = adc1_get_raw(pinCharge);
@@ -688,15 +679,13 @@ extern "C" void app_main(void) {
                 esp_deep_sleep_start();
             }
             adc2_get_raw(pinEStop, width, &raw);
-            printf("estop raw: %i\n", raw);
             // raw = adc1_get_raw(pinEStop);
             //Convert adc_reading to voltage in mV
             voltage = esp_adc_cal_raw_to_voltage(raw, adcCharsEStop);
             float eStop = (float)voltage*57.0/10000.0;
-            printf("eStop voltage: %.3f\n", eStop);
             // printf("pinHomX: %i\n", gpio_get_level(motorX.pinHome));
             printf("X %.1f\t Z %.1f\n", motorX.position, motorZ.position);
-            printf("currectForce %.1f\t FL %.1f\t FR %.1f\n", currentForce, forceL, forceR);
+            printf("force %.1f\t FL %.1f\t FR %.1f\n", motorZ.force, forceL, forceR);
             timePrint = timeNow;
         }
     }

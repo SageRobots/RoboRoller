@@ -10,6 +10,7 @@ Stepper::Stepper(gpio_num_t step, gpio_num_t dir, gpio_num_t home, gpio_num_t CS
 	intrInterval = 100;
 	position = 500;
 	target = 0;
+	force = 0;
 	error = 0;
 	forceError = 0;
 	bPosError = false;
@@ -85,12 +86,13 @@ void Stepper::update(spi_device_handle_t spi) {
 
 	// update error
 	error = target - position;
+	forceError = targetForce - force;
 	if(fabs(error) > 0.25) {
 		bPosError = true;
 	} else {
 		bPosError = false;
 	}
-	if(fabs(forceError) > 0.25) {
+	if(fabs(forceError) > 0.5) {
 		bForceError = true;
 	} else {
 		bForceError = false;

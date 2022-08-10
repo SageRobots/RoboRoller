@@ -53,7 +53,6 @@
 	<p id="motorXPos">X Pos: </p>
 	<p id="p-battery"></p>
 	<p id="p-pos"></p>
-	<p id="p-status"></p>
 </body>
 </html>
 
@@ -166,7 +165,6 @@
 	  xhttpStatus.onreadystatechange = function() {
 	    if (this.readyState == 4 && this.status == 200) {
 	    	var status = this.responseText;
-	      document.getElementById("p-status").innerHTML = status;
 	      //parse the status
 	      var statusList = status.split(',');
 	      //set pinHomX indicator
