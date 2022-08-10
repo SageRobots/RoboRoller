@@ -93,6 +93,21 @@ void loadCell2(void *pvParameters) {
 }
 
 extern "C" void app_main(void) {
+    //configure outputs
+    gpio_config_t io_conf;
+    //disable interrupt
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT;
+    //bit mask of the pins that you want to set
+    io_conf.pin_bit_mask = 1ULL<<pinLCClk|1ULL<<pinLCClk2;
+    //disable pull-down mode
+    io_conf.pull_down_en = (gpio_pulldown_t)0;
+    //disable pull-up mode
+    io_conf.pull_up_en = (gpio_pullup_t)0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+
     //create load cell tasks
     xTaskCreate(loadCell, "loadCell", configMINIMAL_STACK_SIZE * 5, NULL, 2, NULL);
     xTaskCreate(loadCell2, "loadCell2", configMINIMAL_STACK_SIZE * 5, NULL, 1, NULL);

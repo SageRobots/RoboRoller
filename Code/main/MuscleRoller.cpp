@@ -78,10 +78,10 @@ struct cycle cycle;
 int64_t timeNow;
 int64_t timePrint = 0;
 
-const float LC1Zero = 39600;
-const float LC125lb = 627188;
-const float LC2Zero = 44318;
-const float LC225lb = 627140;
+const float LC1Zero = 187200; //near side
+const float LC125lb = -392000;
+const float LC2Zero = -92093; //far side
+const float LC225lb = 479727;
 float forceL, forceR;
 float targetForce = 0, currentForce = 0;
 const float forceTolerance = 0.2;
@@ -628,7 +628,7 @@ extern "C" void app_main(void) {
     //bit mask of the pins that you want to set
     io_conf.pin_bit_mask = 1ULL<<pinDirX|1ULL<<pinStepX|1ULL<<pinMSX|1ULL<<pinEn;
     io_conf.pin_bit_mask |= 1ULL<<pinDirZ|1ULL<<pinStepZ|1ULL<<pinMSZ;
-    io_conf.pin_bit_mask |= 1ULL<<pinCS0|1ULL<<pinCS1;
+    io_conf.pin_bit_mask |= 1ULL<<pinCS0|1ULL<<pinCS1|1ULL<<pinLCClk|1ULL<<pinLCClk2;
     //disable pull-down mode
     io_conf.pull_down_en = (gpio_pulldown_t)0;
     //disable pull-up mode
