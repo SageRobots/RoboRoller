@@ -6,7 +6,6 @@ BOM.htm
 Code/build/
 Cal/build/
 SPI_Test/
-Code/sdkconfig
 Code/main/Kconfig.projbuild
 Code/sdkconfig.old
 Cal/sdkconfig
