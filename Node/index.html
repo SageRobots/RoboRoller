@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Muscle Roller</title>
+</head>
+<body>
+	<h1>Muscle Roller Controls</h1>
+	<button type="button" id="btn-connect">Connect</button>
+	<div id="connected" style="width:50px;height:50px;background-color:gray;"></div>
+
+	<div>
+		<h2>Motor X</h2>
+		<label for="inp-move-x">Command:</label>
+	  <input type="text" id="inp-move-x" name="inp-move-x"><br>
+		<button type="button" id="btn-move-x">Move</button>
+	</div>
+
+	<div>
+		<label for="inp-speed">Speeds:</label>
+	  <input type="text" id="inp-speed" name="inp-speed"><br>
+		<button type="button" id="btn-speed">Set Speeds</button>
+	</div>
+
+	<div>
+		<label for="inp-force">Force:</label>
+	  <input type="text" id="inp-force" name="inp-force"><br>
+		<button type="button" id="btn-force">Set Force</button>
+	</div>
+
+	<div>
+		<button type="button" id="btn-home-x">Home X</button>
+		<button type="button" id="btn-home-z">Home Z</button>
+	</div>
+
+	<div>
+		<label for="inp-cycle-start-x">Start X:</label>
+	  <input type="text" id="inp-cycle-start-x" name="inp-cycle-start-x"><br>
+		<label for="inp-cycle-start-z">Start Z:</label>
+	  <input type="text" id="inp-cycle-start-z" name="inp-cycle-start-z"><br>
+		<label for="inp-cycle-force">Force:</label>
+	  <input type="text" id="inp-cycle-force" name="inp-cycle-force"><br>
+		<label for="inp-cycle-end-x">End X:</label>
+	  <input type="text" id="inp-cycle-end-x" name="inp-cycle-end-x"><br>
+		<label for="inp-cycle-travel-speed">Travel Speed:</label>
+	  <input type="text" id="inp-cycle-travel-speed" name="inp-cycle-travel-speed"><br>
+	  <label for="inp-cycle-speed">Speed:</label>
+	  <input type="text" id="inp-cycle-speed" name="inp-cycle-speed"><br>
+		<button type="button" id="btn-cycle">Cycle</button>
+		<button type="button" id="btn-stop">Stop</button>
+	</div>
+
+	<p id="p1"></p>
+	<p id="pinHomX">Home X</p>
+	<p id="pinHomZ">Home Z</p>
+	<p id="motorXPos">X Pos: </p>
+	<p id="p-battery"></p>
+	<p id="p-pos"></p>
+</body>
+</html>
+
+<script>
+	var btnConnect = document.getElementById('btn-connect');
+	var btnMoveX = document.getElementById('btn-move-x');
+ 	var xhttpConnect = new XMLHttpRequest();
+ 	var xhttpStatus = new XMLHttpRequest();
+ 	var xhttpMoveX = new XMLHttpRequest();
+
+	btnConnect.onclick = function() {
+		var getQuery = 'connect'
+		console.log("getQuery: " + getQuery);
+		xhttpConnect.open('GET', getQuery, true);
+		xhttpConnect.send();
+	}
+
+	btnMoveX.onclick = function() {
+		var getQuery = 'movex'
+		var raw = document.getElementById('inp-move-x').value;
+		getQuery += raw;
+		console.log("getQuery: " + getQuery);
+		xhttpMoveX.open('GET', getQuery, true);
+		xhttpMoveX.send();
+	};
+
+	//request status periodically
+	function getStatus() {
+		xhttpStatus.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				var status = this.responseText;
+	      		console.log(status);
+	      		// parse
+	      		var statusList = status.split(',');
+	      		if(statusList[1] == '0') {
+	      			document.getElementById("connected").style.backgroundColor = "gray";
+	      		} else {
+	      			document.getElementById("connected").style.backgroundColor = "green";
+	      		}
+	  		}
+		};
+		xhttpStatus.open("GET", "status", true);
+		xhttpStatus.send();
+	};
+setInterval(getStatus, 1000);
+</script>

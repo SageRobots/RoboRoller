@@ -378,10 +378,17 @@ static char *bda2str(uint8_t *bda, char *str, size_t size) {
 void parseData(esp_spp_cb_param_t *param) {
     //create string from data
     std::string data = (char*)param->data_ind.data;
+    std::string cmd = data.substr(0,5);
 
-    if (data.substr(0,5) == "movex") {
+    if (cmd == "movex") {
         motorX.target = std::stof(data.substr(5,3));
         printf("motorX.target = %.0f\n", motorX.target);
+    } else if (cmd == "movez") {
+        motorZ.target = std::stof(data.substr(5,3));
+    } else if (cmd == "spedx") {
+        motorX.speed = std::stof(data.substr(5,3));
+    } else if (cmd == "spedz") {
+        motorZ.speed = std::stof(data.substr(5,3));
 
     // } else if (uri.substr(0,7) == "/speeds") {
     //     if (buf_len > 1) {
