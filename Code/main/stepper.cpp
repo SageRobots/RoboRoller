@@ -19,6 +19,7 @@ Stepper::Stepper(gpio_num_t step, gpio_num_t dir, gpio_num_t home, gpio_num_t CS
 	anglePrev = 0;
 	stepsPer_mm = 200.0/8.0;
 	invertPos = invert;
+	speed = 10;
 	transitionSpeed = 17; //deg/s
 }
 
